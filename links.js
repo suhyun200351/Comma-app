@@ -175,7 +175,7 @@
     var m = scr.querySelector('[data-comp="Step Item/State=Modal"]'); if (!m) return;
     var t = [].filter.call(m.querySelectorAll('.t'), function (x) { return re.test(x.textContent.trim()); })[0]; if (!t) return;
     var b = api.pick(t, scr, {maxH: 60});
-    api.hot(b, function () { var s = st(); s.loggedIn = false; s.history = []; s.afterLogin = null; api.go('A-1'); setTimeout(function () { if (window.COMMA_TOAST) window.COMMA_TOAST(msg); }, 300); });
+    api.hot(b, function () { var s = st(), D = window.COMMA_DATA; s.loggedIn = false; s.history = []; s.afterLogin = null; D.myBooks = []; D.posted = []; api.go('A-1'); setTimeout(function () { if (window.COMMA_TOAST) window.COMMA_TOAST(msg); }, 300); });
   }
   // 시트 화면: 뒤에는 지금 홈 화면을 그대로 깔고, 시트 위쪽 빈 곳을 누르면 닫힘
   function sheetUnder(scr, api) {

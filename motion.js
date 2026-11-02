@@ -457,7 +457,13 @@
     var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && (BOOK_OF[c.dataset.name] || c.dataset.mybook !== undefined); });
     cards.forEach(function (c) { c.style.cursor = 'pointer'; });
     scr.addEventListener('click', function (e) {
-      var card = cards.filter(function (c) { return c.contains(e.target); })[0];
+      // 책 표지 그림(img)은 클릭을 통과시키므로 손가락 위치로 맨 위 책을 찾음
+      var t = e.target, fx = t.closest && t.closest('.fixed');
+      if (fx && t.parentElement !== fx) return;             // 진짜 버튼(질문 남기기 등)
+      var card = cards.filter(function (c) { return c.contains(t); })[0];
+      if (!card) card = cards.slice().reverse().filter(function (c) {
+        var b = c.getBoundingClientRect(); return e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom;
+      })[0];
       if (!card || busyFx) return;
       e.stopPropagation(); e.preventDefault();
       var D = window.COMMA_DATA, id = card.dataset.mybook !== undefined ? 'my:' + card.dataset.mybook : BOOK_OF[card.dataset.name], r = A.rel(card, scr);
