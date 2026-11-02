@@ -36,4 +36,4 @@ html,body{margin:0;height:100%;background:#151515;overflow:hidden;overscroll-beh
 
 /* 폰: 폭 맞춤 + 세로는 페이지 스크롤 */
 html.phone,html.phone body{overflow-x:hidden;overflow-y:auto;height:auto;-webkit-overflow-scrolling:touch}
-html.phone body{position:relative}
+html.phone body{position:relative;overflow:hidden}
