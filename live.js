@@ -6,7 +6,7 @@
     monthly: 200000, months: 12, prefs: { '자동이체': false, '급여이체': false, '카드 실적': false },
     baseRate: 3.0, question: '', topic: '', when: '', pick: '청년미래적금',
     action: '우대조건 서류 챙기기', day: 30, likes: {},
-    boxed: {}, compare: {}, pickSel: null, steps: {}, posted: [], myBooks: [], blocked: {}, passed: {}, infoDone: false, c1Visited: false, c1Done: false, docs: {}, seenTerm: false, search: ''
+    boxed: {}, compare: {}, pickSel: null, steps: {}, posted: [], myBooks: [], bookAns: {}, myAnswers: [], answerDraft: '', blocked: {}, passed: {}, infoDone: false, c1Visited: false, c1Done: false, docs: {}, seenTerm: false, search: ''
   };
   var PRODUCTS = {
     '첫걸음적금': { bank: '△△은행', rate: 3.1 },
@@ -473,7 +473,7 @@
       if (k === 'B3-5' && ta && !D.question) { ta.value = ''; }
       qReady(scr);
     }
-    if (k === 'B3-2') textInput(scr, api, /^답변$/, { max: 100, w: 190 });
+    if (/^B3-[123]$/.test(k)) answerBar(scr, k, api);
     if (k === 'E3-1' && D.question) { var q = api.findText(scr, /^가구원은 누구까지일까/); }
   };
   /* ---------- 상품 목록 ---------- */
@@ -777,6 +777,34 @@
     imgs.forEach(function (im, i) { var n = i + 1; im.src = (D.steps[n] || n < cur) && D.steps[n] ? src.done : n === cur ? src.cur : src.todo; });
   }
 
+  /* ---------- 질문책 상세 아래 답변 달기 (B3-1 · 2 · 3 모두) ---------- */
+  function answerBar(scr, k, api) {
+    var content = scr.querySelector('.content'); if (!content) return;
+    var bar = scr.querySelector('[data-name="Frame 2087332311"]');
+    if (!bar) {
+      var tpl = document.createElement('template'); tpl.innerHTML = window.SCREENS['B3-2'];
+      bar = tpl.content.querySelector('[data-name="Frame 2087332311"]'); if (!bar) return;
+      bar.style.top = (parseFloat(content.style.height) - 102) + 'px'; bar.style.zIndex = 3;
+      content.appendChild(bar); if (window.COMMA_FIXB) window.COMMA_FIXB(bar);
+    }
+    var ta = textInput(bar, api, /^답변$/, { max: 100, w: 190, value: D.answerDraft || '', onInput: function (v) { D.answerDraft = v; } });
+    var reg = api.findText(bar, /^등록$/); if (!reg) return;
+    var btn = reg.parentElement;
+    btn.classList.add('hot');
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var v = ((ta && ta.value) || '').trim();
+      if (!window.COMMA.loggedIn) { toast('로그인하면 답변을 남길 수 있어요'); setTimeout(function () { window.COMMA.afterLogin = k; api.go('A-1'); }, 700); return; }
+      if (!v) { toast('답변을 먼저 적어 주세요'); if (window.COMMA_SHAKE) window.COMMA_SHAKE(bar.querySelector('[data-name="Frame 2087332249"]') || bar, 4); return; }
+      var id = D.book || 'household';
+      (D.bookAns = D.bookAns || {})[id] = [v].concat(D.bookAns[id] || []);
+      var my = /^my:/.test(id) ? (D.myBooks[+id.slice(3)] || {}).q : (BOOKS[id] ? BOOKS[id].q : '가구원은 누구까지일까?');
+      (D.myAnswers = D.myAnswers || []).unshift([my || '질문책', '“' + v + '”', 0]);
+      D.answerDraft = ''; if (ta) { ta.value = ''; ta.dispatchEvent(new Event('input')); ta.blur(); }
+      toast('답변을 남겼어요');
+      api.show('B3-2', k === 'B3-2' ? { replace: true } : {});
+    });
+  }
   /* ---------- 내 질문 · 내 답변 ---------- */
   var MY_ANSWERS = [
     ['가구원은 누구까지일까?', '“등본에 같이 올라 있으면 가구원이에요”', 14],
@@ -798,11 +826,13 @@
       r.style.top = '0px'; list.insertBefore(r, list.firstChild); list.style.height = (px(list, 'height') + RH) + 'px';
     });
     if (qTab) setText(qTab, '내 질문 ' + (2 + D.posted.length));
+    var aTab = api.findText(scr, /^내 답변 \d+$/); if (aTab) setText(aTab, '내 답변 ' + (+textOf(aTab).replace(/\D/g, '') + (D.myAnswers || []).length));
     var qRows = named(list);
     // 내 답변 목록 (같은 줄 모양으로 만듦)
     var ans = document.createElement('div'); ans.dataset.name = 'answers';
-    ans.style.cssText = 'left:0;top:0;width:345px;height:' + (RH * MY_ANSWERS.length) + 'px;display:none';
-    MY_ANSWERS.forEach(function (a, i) {
+    var ALL = (D.myAnswers || []).concat(MY_ANSWERS);
+    ans.style.cssText = 'left:0;top:0;width:345px;height:' + (RH * ALL.length) + 'px;display:none';
+    ALL.forEach(function (a, i) {
       var r = rowModel.cloneNode(true), ts = r.querySelectorAll('.t'); r.style.top = (RH * i) + 'px';
       setText(ts[0], a[0]); setText(ts[1], a[1] + ' · 공감 ' + a[2]); ans.appendChild(r);
     });
@@ -871,15 +901,17 @@
       body: ['※ 내가 남긴 질문이에요. 마이 › 내 질문에서도 볼 수 있어요.', 'A: 아직 답변이 없어요. 먼저 해 본 사람들이 답을', '달면 알림으로 알려 드릴게요.', '그동안 아래 사람들의 경험과 비슷한 질문을', '먼저 살펴보세요.'] };
   }
   function bookContent(scr, k, api) {
-    var b = /^my:/.test(D.book || '') ? myBookData(+D.book.slice(3)) : BOOKS[D.book]; if (!b) return;
+    var b = /^my:/.test(D.book || '') ? myBookData(+D.book.slice(3)) : BOOKS[D.book];
+    var mine = (D.bookAns || {})[D.book || 'household'] || [];
+    if (!b) { if (!mine.length) return; b = { household: true }; }
     var ts = [].slice.call(scr.querySelectorAll('.t')).filter(function (t) { return !t.closest('.under'); });
     var byY = function (a, c) { return api.rel(a, scr).y - api.rel(c, scr).y; };
     ts.forEach(function (t) {
       var x = textOf(t);
-      if (x === 'Book 1') setText(t, 'Book ' + b.no);
-      if (/^사람들의 경험 \d+$/.test(x)) setText(t, '사람들의 경험 ' + b.exp);
+      if (x === 'Book 1' && b.no) setText(t, 'Book ' + b.no);
+      if (/^사람들의 경험 \d+$/.test(x)) setText(t, '사람들의 경험 ' + ((b.exp != null ? b.exp : +x.replace(/\D/g, '')) + mine.length));
     });
-    if (k === 'B3-1') {
+    if (k === 'B3-1' && !b.household) {
       var title = ts.filter(function (t) { return textOf(t) === '가구원은 누구까지일까?'; })[0];
       if (title) { var ln = title.querySelector('.ln'), sp = ln.querySelectorAll('span'), su = sp[0].getAttribute('style'), sn = sp[1].getAttribute('style');
         setSpans(ln, b.title.map(function (p) { return [p[0], p[1] ? su : sn]; })); title.style.width = 'auto'; }
@@ -903,18 +935,24 @@
         var wrap = document.createElement('div');
         wrap.style.cssText = 'position:absolute;left:0;top:0;width:' + D.bookCard.w + 'px;height:' + D.bookCard.h + 'px;transform-origin:0 0;transform:scale(' + s + ')';
         wrap.innerHTML = D.bookCard.html; var c0 = wrap.firstElementChild;
-        if (c0) { c0.style.left = '0px'; c0.style.top = '0px'; c0.style.visibility = ''; c0.style.cursor = ''; }
+        if (c0) { c0.style.left = -(D.bookCard.ix || 0) + 'px'; c0.style.top = -(D.bookCard.iy || 0) + 'px'; c0.style.visibility = ''; c0.style.cursor = ''; }
         [c0].concat([].slice.call(wrap.querySelectorAll('*'))).forEach(function (e) { if (e && e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
         cover.style.overflow = 'visible'; cover.appendChild(wrap);
       }
     }
     if (k === 'B3-2') {
       var rv = ts.filter(function (t) { return /^(등본을 떼보니|따로 사는데|주민센터에서)/.test(textOf(t)); }).sort(byY);
-      rv.forEach(function (t, i) { if (b.reviews[i]) setText(t, b.reviews[i][0]); });
       var lk = ts.filter(function (t) { return /^공감 \d+$/.test(textOf(t)); }).sort(byY);
-      lk.forEach(function (t, i) { if (b.reviews[i]) setText(t, '공감 ' + b.reviews[i][1]); });
+      var lb = ts.filter(function (t) { return /가입자 후기$/.test(textOf(t)); }).sort(byY);
+      var base = b.reviews || rv.map(function (t, i) { return [textOf(t), lk[i] ? +textOf(lk[i]).replace(/\D/g, '') : 0]; });
+      // 내가 남긴 답변이 맨 위에
+      var list = mine.map(function (a) { return [a, 0, 1]; }).concat(base);
+      rv.forEach(function (t, i) { var it = list[i]; if (!it) return;
+        setText(t, it[2] ? fitLines(it[0], spanFont(t.querySelector('span')), 320, 1)[0] : it[0]);
+        if (it[2] && lb[i]) { setText(lb[i], '방금 남긴 내 답변'); lb[i].querySelector('span').style.color = BOOK_LIME; } });
+      lk.forEach(function (t, i) { if (list[i]) setText(t, '공감 ' + list[i][1]); });
     }
-    if (k === 'B3-3') {
+    if (k === 'B3-3' && !b.household) {
       var qs2 = ts.filter(function (t) { var r = api.rel(t, scr); return r.x > 80 && r.x < 90 && /\?$/.test(textOf(t)); }).sort(byY);
       qs2.forEach(function (t, i) { if (b.similar[i]) setText(t, b.similar[i][0]); });
       var cats = ts.filter(function (t) { var r = api.rel(t, scr); return r.x > 80 && r.x < 90 && /^(가입 판단|금액 설계|가입 후)$/.test(textOf(t)); }).sort(byY);

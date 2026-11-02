@@ -396,10 +396,18 @@
     var st = stage(); st.insertBefore(l, st.firstChild);
     return l;
   }
+  // 그림 한 장짜리 책(그림자 여백 포함)은 실제 책 부분만 — [왼, 위, 폭, 높이]
+  var INSET = { '53e178108df4c379': [16, 12, 122, 197], '7c3f8fb00fe61452': [12, 12, 132, 213], '3452465a5d88b668': [16, 12, 116, 165], 'e3e3428de60506a8': [16, 12, 133, 187] };
+  function cardInset(c) {
+    var m = c.tagName === 'IMG' && /([0-9a-f]{16})\.png/.exec(c.getAttribute('src') || ''), v = m && INSET[m[1]];
+    return v ? v.slice() : [0, 0, c.offsetWidth, c.offsetHeight];
+  }
+  window.COMMA_CARD_INSET = cardInset;
   function bookOpen(card, scr, go) {
     if (busyFx) return; busyFx = true;
-    var sc = api().scale(), sr = stage().getBoundingClientRect(), r = card.getBoundingClientRect();
-    var x = (r.left - sr.left) / sc, y = (r.top - sr.top) / sc, w = r.width / sc, h = r.height / sc;
+    var sc = api().scale(), sr = stage().getBoundingClientRect(), r = card.getBoundingClientRect(), ins = cardInset(card);
+    var cx = ((r.left + r.right) / 2 - sr.left) / sc, cy = ((r.top + r.bottom) / 2 - sr.top) / sc;
+    var x = cx - card.offsetWidth / 2 + ins[0], y = cy - card.offsetHeight / 2 + ins[1], w = ins[2], h = ins[3];
     var L = fxLayer();
     var dim = div('left:0;top:0;width:393px;height:852px;background:#000;opacity:0'); L.appendChild(dim);
     var ph = div('left:' + x + 'px;top:' + y + 'px;width:' + w + 'px;height:' + h + 'px;outline:1px dashed #71706c;outline-offset:-1px');
@@ -411,7 +419,7 @@
       var pg = div('left:0;top:0;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,#dcdcd8 0%,#f7f7f5 9%,#f7f7f5 90%,#e4e4e0 100%)');
       book.appendChild(pg); pages.push(pg);
     }
-    var front = card.cloneNode(true); front.style.left = '0px'; front.style.top = '0px'; front.style.transformOrigin = '0 50%'; front.style.margin = '0'; [front].concat([].slice.call(front.querySelectorAll('*'))).forEach(function (e) { if (e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
+    var front = card.cloneNode(true); front.style.left = -ins[0] + 'px'; front.style.top = -ins[1] + 'px'; front.style.transformOrigin = ins[0] + 'px 50%'; front.style.margin = '0'; [front].concat([].slice.call(front.querySelectorAll('*'))).forEach(function (e) { if (e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
     var backC = div('left:0;top:0;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,#e6e6e2,#f7f7f5 14%)');
     book.appendChild(backC); book.appendChild(front);
     card.style.visibility = 'hidden';
@@ -468,7 +476,8 @@
       e.stopPropagation(); e.preventDefault();
       var D = window.COMMA_DATA, id = card.dataset.mybook !== undefined ? 'my:' + card.dataset.mybook : BOOK_OF[card.dataset.name], r = A.rel(card, scr);
       D.book = id;
-      D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: r.w, h: r.h };
+      var ins = cardInset(card);
+      D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: ins[2], h: ins[3], ix: ins[0], iy: ins[1] };
       if (RM) { A.go('B3-1'); return; }
       bookOpen(card, scr, function () { A.go('B3-1'); });
     }, true);
