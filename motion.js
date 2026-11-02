@@ -454,13 +454,13 @@
     'Frame 2087332314': 'special', 'Frame 2087332313': 'autodebit', 'Group': 'prefcheck' };
   function bookSetup(scr) {
     var A = api(), g = scr.querySelector('[data-name="Group 26"]'); if (!g) return;
-    var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && BOOK_OF[c.dataset.name]; });
+    var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && (BOOK_OF[c.dataset.name] || c.dataset.mybook !== undefined); });
     cards.forEach(function (c) { c.style.cursor = 'pointer'; });
     scr.addEventListener('click', function (e) {
       var card = cards.filter(function (c) { return c.contains(e.target); })[0];
       if (!card || busyFx) return;
       e.stopPropagation(); e.preventDefault();
-      var D = window.COMMA_DATA, id = BOOK_OF[card.dataset.name], r = A.rel(card, scr);
+      var D = window.COMMA_DATA, id = card.dataset.mybook !== undefined ? 'my:' + card.dataset.mybook : BOOK_OF[card.dataset.name], r = A.rel(card, scr);
       D.book = id;
       D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: r.w, h: r.h };
       if (RM) { A.go('B3-1'); return; }
@@ -491,7 +491,14 @@
   function homeCards(scr) {
     var A = api(), imgs = [].filter.call(scr.querySelectorAll('img'), function (i) { return /\.png$/.test(i.getAttribute('src') || '') && A.rel(i, scr).w > 100; });
     var blocks = [];
-    imgs.forEach(function (im) { var p = im.parentElement, b = p && p.dataset && p.dataset.name && A.rel(p, scr).h < 260 ? p : im; if (blocks.indexOf(b) < 0) blocks.push(b); });
+    imgs.forEach(function (im) { var p = im.parentElement, b = p && p.dataset && p.dataset.name && A.rel(p, scr).h < 260 ? p : im; if (b.dataset && b.dataset.mybook !== undefined) return; if (blocks.indexOf(b) < 0) blocks.push(b); });
+    // 방금 남긴 내 질문 책: 위에서 떨어져 쌓임
+    [].forEach.call(scr.querySelectorAll('[data-drop="1"]'), function (c, i) {
+      c.removeAttribute('data-drop');
+      anim(c, [{ opacity: 0, translate: '0 -260px', rotate: '-24deg', scale: '1.15' }, { opacity: 1, translate: '0 10px', rotate: '3deg', scale: '1', offset: .7 }, { translate: '0 0', rotate: c.style.rotate || '0deg' }],
+        { duration: 900, delay: 500 + i * 120, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'backwards' });
+      setTimeout(function () { if (c.isConnected && window.COMMA_TOAST) window.COMMA_TOAST('내 질문이 질문책에 꽂혔어요'); }, 1400);
+    });
     if (!blocks.length) return;
     var pos = function (b) { var r = A.rel(b, scr); return Math.round(r.y / 40) * 1000 + r.x; };
     blocks.sort(function (a, b) { return pos(a) - pos(b); });

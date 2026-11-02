@@ -6,7 +6,7 @@
     monthly: 200000, months: 12, prefs: { '자동이체': false, '급여이체': false, '카드 실적': false },
     baseRate: 3.0, question: '', topic: '', when: '', pick: '청년미래적금',
     action: '우대조건 서류 챙기기', day: 30, likes: {},
-    boxed: {}, compare: {}, pickSel: null, steps: {}, posted: [], blocked: {}, passed: {}, infoDone: false, c1Visited: false, c1Done: false, docs: {}, seenTerm: false, search: ''
+    boxed: {}, compare: {}, pickSel: null, steps: {}, posted: [], myBooks: [], blocked: {}, passed: {}, infoDone: false, c1Visited: false, c1Done: false, docs: {}, seenTerm: false, search: ''
   };
   var PRODUCTS = {
     '첫걸음적금': { bank: '△△은행', rate: 3.1 },
@@ -416,6 +416,7 @@
       if (txt === '오늘') D.day = TODAY; else if (txt === '내일') D.day = TODAY + 1; else if (/^이번 주말/.test(txt)) D.day = 24;
       var m = txt.match(/^10월 (\d+)일$/); if (m) D.day = +m[1];
     });
+    if (k === 'B-0' || k === 'B2-1') myBooks(scr, api);
     if (/^B3-[123]$/.test(k)) bookContent(scr, k, api);
     extras(scr, k, api);
     // 지금 값으로 미리 골라 두기
@@ -864,8 +865,13 @@
   function escH(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
   function spanStyle(sp) { return (sp.getAttribute('style') || '').replace(/;?\s*color:[^;]*/, ''); }
   function setSpans(ln, parts) { ln.innerHTML = parts.map(function (p) { return '<span style="' + p[1] + '">' + escH(p[0]) + '</span>'; }).join(''); }
+  function myBookData(i) {
+    var m = (D.myBooks || [])[i]; if (!m) return null; var base = BOOKS[MYBASE[m.cat]];
+    return { no: 8 + i, title: [['내가 남긴', 1], [' 질문']], q: m.q, exp: base.exp, reviews: base.reviews, similar: base.similar,
+      body: ['※ 내가 남긴 질문이에요. 마이 › 내 질문에서도 볼 수 있어요.', 'A: 아직 답변이 없어요. 먼저 해 본 사람들이 답을', '달면 알림으로 알려 드릴게요.', '그동안 아래 사람들의 경험과 비슷한 질문을', '먼저 살펴보세요.'] };
+  }
   function bookContent(scr, k, api) {
-    var b = BOOKS[D.book]; if (!b) return;
+    var b = /^my:/.test(D.book || '') ? myBookData(+D.book.slice(3)) : BOOKS[D.book]; if (!b) return;
     var ts = [].slice.call(scr.querySelectorAll('.t')).filter(function (t) { return !t.closest('.under'); });
     var byY = function (a, c) { return api.rel(a, scr).y - api.rel(c, scr).y; };
     ts.forEach(function (t) {
@@ -878,7 +884,8 @@
       if (title) { var ln = title.querySelector('.ln'), sp = ln.querySelectorAll('span'), su = sp[0].getAttribute('style'), sn = sp[1].getAttribute('style');
         setSpans(ln, b.title.map(function (p) { return [p[0], p[1] ? su : sn]; })); title.style.width = 'auto'; }
       var q = ts.filter(function (t) { return /^Q:/.test(textOf(t)); })[0];
-      if (q) { var ql = q.querySelector('.ln'), qs = ql.querySelectorAll('span'); setSpans(ql, [['Q', qs[0].getAttribute('style')], [': ' + b.q, qs[qs.length - 1].getAttribute('style')]]); }
+      if (q) { var ql = q.querySelector('.ln'), qs = ql.querySelectorAll('span'), qtext = fitLines(': ' + b.q, spanFont(qs[qs.length - 1]), 330, 1)[0];
+        setSpans(ql, [['Q', qs[0].getAttribute('style')], [qtext, qs[qs.length - 1].getAttribute('style')]]); }
       var body = ts.filter(function (t) { return /^※/.test(textOf(t)); })[0];
       if (body) {
         var lns = [].slice.call(body.querySelectorAll('.ln')), base = spanStyle(lns[0].querySelector('span'));
@@ -913,6 +920,57 @@
       var cats = ts.filter(function (t) { var r = api.rel(t, scr); return r.x > 80 && r.x < 90 && /^(가입 판단|금액 설계|가입 후)$/.test(textOf(t)); }).sort(byY);
       cats.forEach(function (t, i) { if (b.similar[i]) setText(t, b.similar[i][1]); });
     }
+  }
+  /* ---------- 내가 남긴 질문 = 홈 질문책 맨 위에 내 책 (서브 색: 가입 판단 분홍 · 금액 설계 보라 · 가입 후 청록) ---------- */
+  var MYCOVER = { '가입 판단': 'assets/f5dca6b1a6709fb5.png', '금액 설계': 'cover-purple.png', '가입 후': 'cover-cyan.png' };
+  var MYBASE = { '가입 판단': 'income', '금액 설계': 'interest', '가입 후': 'autodebit' };
+  var measureCtx = null;
+  function fitLines(text, font, maxW, maxLines) {
+    if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+    measureCtx.font = font;
+    var w = function (x) { return measureCtx.measureText(x).width; }, out = [], cur = '';
+    var words = text.split(/(\s+)/);
+    words.forEach(function (wd) {
+      if (!wd) return;
+      if (w(cur + wd) <= maxW || !cur.trim()) {
+        if (w(cur + wd) <= maxW) { cur += wd; return; }
+        // 한 낱말이 너무 길면 글자 단위로
+        for (var i = 0; i < wd.length; i++) { if (w(cur + wd[i]) > maxW && cur) { out.push(cur); cur = ''; } cur += wd[i]; }
+        return;
+      }
+      out.push(cur.replace(/\s+$/, '')); cur = wd.replace(/^\s+/, '');
+    });
+    if (cur.trim()) out.push(cur);
+    if (out.length > maxLines) { out = out.slice(0, maxLines); var last = out[maxLines - 1]; while (last.length && w(last + '…') > maxW) last = last.slice(0, -1); out[maxLines - 1] = last.replace(/\s+$/, '') + '…'; }
+    return out;
+  }
+  function spanFont(sp) { var cs = getComputedStyle(sp); return cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily; }
+  function myBooks(scr, api) {
+    var list = D.myBooks || []; if (!list.length) return;
+    var g = scr.querySelector('[data-name="Group 26"]'), tpl = g && g.querySelector('[data-name="Frame 2087332315"]'); if (!tpl) return;
+    var show = list.slice(-4).reverse(), rows = Math.ceil(show.length / 2), SHIFT = rows * 186;
+    var gTop = px(g, 'top');
+    // 원래 책 더미는 아래로
+    [].forEach.call(g.children, function (c) { c.style.top = (px(c, 'top') + SHIFT) + 'px'; });
+    g.style.height = (px(g, 'height') + SHIFT) + 'px';
+    var content = scr.querySelector('.scroller .content') || scr.querySelector('.content');
+    if (content) content.style.height = (parseFloat(content.style.height) + SHIFT) + 'px';
+    var gR = api.rel(g, scr);
+    [].forEach.call((g.parentElement || content).children, function (c) { if (c !== g && c.dataset && c.dataset.name && api.rel(c, scr).y > gR.y + 10 && !c.closest('.fixed')) c.style.top = (px(c, 'top') + SHIFT) + 'px'; });
+    [].forEach.call(scr.querySelectorAll('.t'), function (t) { var m = /^(\d+)권$/.exec(textOf(t)); if (m && !t.dataset.base) { t.dataset.base = m[1]; } if (t.dataset.base) setText(t, (+t.dataset.base + list.length) + '권'); });
+    var POS = [[12, 0, -3], [190, 14, 4], [24, 186, 2], [200, 196, -4]];
+    show.forEach(function (b, i) {
+      var idx = list.indexOf(b), card = tpl.cloneNode(true), p = POS[i];
+      card.dataset.name = 'MyBook'; card.dataset.mybook = idx; card.removeAttribute('data-id');
+      card.style.left = p[0] + 'px'; card.style.top = p[1] + 'px'; card.style.rotate = p[2] + 'deg'; card.style.zIndex = 5;
+      card.style.boxShadow = '0 10px 24px rgba(0,0,0,.45)';
+      var im = card.querySelector('img'); if (im) im.src = MYCOVER[b.cat];
+      g.appendChild(card);
+      var ts = card.querySelectorAll('.t'), tt = ts[0], ct = ts[1];
+      if (tt) { var sp = tt.querySelector('span'); setText(tt, fitLines(b.q, spanFont(sp), px(tt.parentElement, 'width') || 99, 2).join('\n')); }
+      if (ct) setText(ct, b.cat + ' 0');
+      if (!b.dropped) { card.dataset.drop = '1'; b.dropped = true; }
+    });
   }
   function extras(scr, k, api) {
     // 달력: 아무 날이나 고르기

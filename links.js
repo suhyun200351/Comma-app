@@ -25,7 +25,18 @@
   var toLogin = function (after) { return function () { st().afterLogin = typeof after === 'function' ? after() : after; return 'A-1'; }; };
   var pickD = function (n) { return function () { window.COMMA_DATA.pick = n; return 'D2-1'; }; };
   var step = function (n, to) { return function () { window.COMMA_DATA.steps[n] = true; return to; }; };
-  var postQ = function () { var D = window.COMMA_DATA; if (!st().loggedIn) return 'B3-6'; if (D.question.trim()) { D.posted.push(D.question.trim()); D.question = ''; } return 'B3-7'; };
+  // 질문 등록: 내 질문 목록 + 홈 질문책에 내 책 한 권 (언제 궁금한지에 따라 서브 색)
+  var postQ = function () {
+    var D = window.COMMA_DATA; if (!st().loggedIn) return 'B3-6';
+    var q = D.question.trim();
+    if (q) {
+      D.posted.push(q);
+      var cat = D.when === '금액 정하기' ? '금액 설계' : D.when === '가입 후' ? '가입 후' : '가입 판단';
+      (D.myBooks = D.myBooks || []).push({ q: q, cat: cat, dropped: false });
+      D.question = '';
+    }
+    return 'B3-7';
+  };
   // 로그인해야 볼 수 있는 화면
   window.LOGIN_ONLY = /^(E0-[2-8]|E1-1|E3-1|F-1|F-1′|S-5)$/;
   // 비교하기 (0): 보관함에 담은 게 없으면 넘어가지 않고 알려 줌
