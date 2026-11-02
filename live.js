@@ -416,6 +416,7 @@
       if (txt === '오늘') D.day = TODAY; else if (txt === '내일') D.day = TODAY + 1; else if (/^이번 주말/.test(txt)) D.day = 24;
       var m = txt.match(/^10월 (\d+)일$/); if (m) D.day = +m[1];
     });
+    if (/^B3-[123]$/.test(k)) bookContent(scr, k, api);
     extras(scr, k, api);
     // 지금 값으로 미리 골라 두기
     if (/^(C0-12|C0-17|E0-7|C0-19)$/.test(k)) { preselect(scr, 'Option', D.house); preselect(scr, 'Chip', D.head); }
@@ -830,6 +831,89 @@
   }
   window.COMMA_TOAST = toast;
   function hotText(scr, api, re, fn, maxH) { [].forEach.call(scr.querySelectorAll('.t'), function (t) { if (t.closest('.under') || t.closest('.hot')) return; if (re.test(textOf(t).replace(/\n/g, ' '))) { var el = api.pick(t, scr, { maxH: maxH || 60 }); if (!el.classList.contains('hot')) api.hot(el, function () { fn(el, t); }); } }); }
+  /* ---------- 질문책 7권: 책마다 상세(B3-1) · 사람들의 경험(B3-2) · 비슷한 질문(B3-3) 내용 ----------
+     book 1 「가구원은 누구까지일까?」는 수현 화면 그대로. 나머지 여섯 권은 같은 틀에 내용만 바꿈 */
+  var BOOKS = {
+    income: { no: 2, title: [['청년 소득 기준은 '], ['세전', 1], ['일까?']], q: '월급에서 세금 떼기 전인지 후인지 헷갈렸어요.',
+      body: ['※ 소득을 보는 기준은 상품마다 조금씩 다를 수 있어요.', 'A: 보통은 세금을 떼기 전, 세전 소득으로 봐요.', '근로소득 원천징수영수증의 총급여가 기준이 되는', '경우가 많아요. 통장에 들어온 돈보다 조금 더 크게', '잡힌다고 생각하면 쉬워요.'],
+      exp: 9, reviews: [['실수령액으로 계산했다가 기준을 넘는 줄 몰랐어요', 11], ['원천징수영수증 총급여로 보니 바로 알겠더라고요', 17], ['첫 해라 소득 증빙이 없어서 은행에 먼저 물어봤어요', 6]],
+      similar: [['성과급도 소득에 들어갈까?', '가입 판단'], ['아르바이트 소득도 합칠까?', '가입 판단'], ['작년 소득이 없으면 어떡할까?', '가입 판단'], ['원천징수영수증은 어디서 뗄까?', '가입 판단'], ['프리랜서는 무엇으로 증명할까?', '가입 판단'], ['비과세 수당도 소득에 들어갈까?', '가입 판단']] },
+    interest: { no: 3, title: [['이자', 1], ['는 어떻게 더해질까?']], q: '연 3%인데 이자가 왜 이렇게 적은지 궁금했어요.',
+      body: ['※ 이자 계산 방식은 상품마다 조금씩 다를 수 있어요.', 'A: 적금은 매달 넣은 돈마다 이자가 붙는 기간이 달라요.', '첫 달에 넣은 돈은 12개월, 마지막 달에 넣은 돈은', '1개월만 이자가 붙어요. 그래서 연 3%여도 실제로', '받는 이자는 생각보다 적게 느껴져요.'],
+      exp: 19, reviews: [['7만 2천 원인 줄 알았는데 3만 9천 원이었어요', 23], ['달마다 붙는 기간이 다르다는 걸 알고 이해됐어요', 15], ['이자에서 세금 15.4%까지 빠지니 더 줄었어요', 9]],
+      similar: [['단리와 복리는 뭐가 다를까?', '금액 설계'], ['이자에도 세금이 붙을까?', '금액 설계'], ['비과세 적금은 뭐가 다를까?', '금액 설계'], ['만기 전에 이자를 받을 수 있을까?', '금액 설계'], ['금리가 중간에 바뀔 수도 있을까?', '금액 설계'], ['예상 이자는 어떻게 계산할까?', '금액 설계']] },
+    pref: { no: 4, title: [['우대금리', 1], ['는 뭐가 다를까?']], q: '최고 금리만 보고 가입했는데 그 금리가 안 나왔어요.',
+      body: ['※ 우대 조건은 상품마다 다르니 약관에서 꼭 확인해요.', 'A: 기본금리는 누구나 받는 금리이고, 우대금리는', '자동이체·급여이체·카드 실적 같은 조건을 채우면', '더해 주는 금리예요. 광고 속 최고 금리는 조건을', '모두 채웠을 때라서 실제로는 더 낮을 수 있어요.'],
+      exp: 31, reviews: [['최고 4%라 들었는데 조건을 못 채워서 3%였어요', 27], ['급여이체만 걸어도 0.3%가 올라서 꼭 챙겼어요', 18], ['카드 실적 조건은 생각보다 채우기 어려웠어요', 12]],
+      similar: [['우대 조건은 언제까지 채울까?', '금액 설계'], ['급여이체는 꼭 월급이어야 할까?', '금액 설계'], ['카드 실적은 얼마나 써야 할까?', '금액 설계'], ['우대금리는 만기에 붙을까?', '금액 설계'], ['조건을 하나만 채워도 될까?', '금액 설계'], ['마케팅 동의도 우대 조건일까?', '금액 설계']] },
+    special: { no: 5, title: [['특별중도해지', 1], ['는 언제 될까요?']], q: '갑자기 돈이 필요할 때 이자를 다 잃는지 궁금했어요.',
+      body: ['※ 인정되는 사유는 상품마다 조금씩 다를 수 있어요.', 'A: 정해진 사유가 있으면 중간에 깨도 약속한 금리를', '그대로 주는 제도예요. 보통 결혼, 출산, 큰 병,', '실직 같은 사유가 들어가고 증빙 서류가 필요해요.', '일반 중도해지는 이자가 크게 줄어요.'],
+      exp: 8, reviews: [['실직 증빙으로 특별중도해지가 돼서 이자를 지켰어요', 14], ['사유가 안 맞아서 일반 해지로 이자가 확 줄었어요', 7], ['깨기 전에 적금 담보 대출이 되는지 먼저 물어봤어요', 5]],
+      similar: [['중도해지하면 이자가 얼마나 줄까?', '가입 후'], ['적금 담보 대출은 어떻게 할까?', '가입 후'], ['일부만 찾을 수는 없을까?', '가입 후'], ['증빙 서류는 무엇을 낼까?', '가입 후'], ['해지하면 우대금리도 사라질까?', '가입 후'], ['만기 직전에 깨도 손해일까?', '가입 후']] },
+    autodebit: { no: 6, title: [['자동이체', 1], [' 날짜를 바꿔도 될까요?']], q: '월급날이 바뀌어서 이체 날짜도 옮기고 싶었어요.',
+      body: ['※ 바꾸는 방법과 횟수는 은행마다 다를 수 있어요.', 'A: 대부분 앱이나 인터넷뱅킹에서 날짜를 바꿀 수 있어요.', '다만 그달에 넣어야 할 돈이 빠지지 않게 조심해요.', '한 번 빠지면 납입 횟수가 모자라 우대금리를', '못 받거나 만기가 늦어질 수 있어요.'],
+      exp: 14, reviews: [['월급날 다음 날로 옮기니 잔액 부족이 없어졌어요', 19], ['바꾸다가 한 달을 건너뛰어서 우대를 놓쳤어요', 8], ['앱에서 1분 만에 날짜를 바꿨어요', 11]],
+      similar: [['이체가 실패하면 어떻게 될까?', '가입 후'], ['한 달에 두 번 넣어도 될까?', '가입 후'], ['금액도 중간에 바꿀 수 있을까?', '가입 후'], ['못 넣은 달은 나중에 채울까?', '가입 후'], ['다른 은행 계좌로 넣어도 될까?', '가입 후'], ['휴일이면 언제 빠져나갈까?', '가입 후']] },
+    prefcheck: { no: 7, title: [['우대금리 조건', 1], ['은 언제 확인할까?']], q: '만기 때 우대금리가 빠져 있어서 당황했어요.',
+      body: ['※ 확인 시점은 상품마다 조금씩 다를 수 있어요.', 'A: 우대 조건은 보통 만기나 해지 때 한꺼번에 따져요.', '그래서 중간에 조건이 빠져도 바로 알기 어려워요.', '가입하고 한두 달 안에 앱에서 우대 조건을 채웠는지', '확인해 두면 만기 때 놀랄 일이 줄어요.'],
+      exp: 22, reviews: [['만기 때 카드 실적이 모자라 우대가 빠졌어요', 16], ['가입 한 달 뒤 앱에서 확인하니 마음이 놓였어요', 12], ['조건을 메모해 두고 석 달마다 다시 봤어요', 9]],
+      similar: [['우대 조건은 앱에서 볼 수 있을까?', '금액 설계'], ['못 채우면 기본금리만 받을까?', '금액 설계'], ['중간에 조건을 바꿀 수 있을까?', '금액 설계'], ['우대금리는 만기에 붙을까?', '금액 설계'], ['카드 실적은 언제부터 셀까?', '금액 설계'], ['해지하면 우대금리도 사라질까?', '가입 후']] }
+  };
+  window.COMMA_BOOKS = BOOKS;
+  var BOOK_LIME = 'rgb(211,255,49)';
+  function escH(x) { return String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function spanStyle(sp) { return (sp.getAttribute('style') || '').replace(/;?\s*color:[^;]*/, ''); }
+  function setSpans(ln, parts) { ln.innerHTML = parts.map(function (p) { return '<span style="' + p[1] + '">' + escH(p[0]) + '</span>'; }).join(''); }
+  function bookContent(scr, k, api) {
+    var b = BOOKS[D.book]; if (!b) return;
+    var ts = [].slice.call(scr.querySelectorAll('.t')).filter(function (t) { return !t.closest('.under'); });
+    var byY = function (a, c) { return api.rel(a, scr).y - api.rel(c, scr).y; };
+    ts.forEach(function (t) {
+      var x = textOf(t);
+      if (x === 'Book 1') setText(t, 'Book ' + b.no);
+      if (/^사람들의 경험 \d+$/.test(x)) setText(t, '사람들의 경험 ' + b.exp);
+    });
+    if (k === 'B3-1') {
+      var title = ts.filter(function (t) { return textOf(t) === '가구원은 누구까지일까?'; })[0];
+      if (title) { var ln = title.querySelector('.ln'), sp = ln.querySelectorAll('span'), su = sp[0].getAttribute('style'), sn = sp[1].getAttribute('style');
+        setSpans(ln, b.title.map(function (p) { return [p[0], p[1] ? su : sn]; })); title.style.width = 'auto'; }
+      var q = ts.filter(function (t) { return /^Q:/.test(textOf(t)); })[0];
+      if (q) { var ql = q.querySelector('.ln'), qs = ql.querySelectorAll('span'); setSpans(ql, [['Q', qs[0].getAttribute('style')], [': ' + b.q, qs[qs.length - 1].getAttribute('style')]]); }
+      var body = ts.filter(function (t) { return /^※/.test(textOf(t)); })[0];
+      if (body) {
+        var lns = [].slice.call(body.querySelectorAll('.ln')), base = spanStyle(lns[0].querySelector('span'));
+        lns.forEach(function (l, i) {
+          var line = b.body[i] || '';
+          if (/^A:/.test(line)) setSpans(l, [['A', base + ';color:' + BOOK_LIME], [line.slice(1), base + ';color:rgb(247,247,245)']]);
+          else setSpans(l, [[line, base + ';color:rgb(247,247,245)']]);
+        });
+      }
+      // 표지: 홈에서 누른 그 책
+      var cover = scr.querySelector('[data-name="Frame 2087332315"]');
+      if (cover && D.bookCard) {
+        [].forEach.call(cover.children, function (c) { c.style.visibility = 'hidden'; });
+        var s = window.COMMA_BOOK_SCALE ? window.COMMA_BOOK_SCALE(D.bookCard.w, D.bookCard.h) : 1;
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'position:absolute;left:0;top:0;width:' + D.bookCard.w + 'px;height:' + D.bookCard.h + 'px;transform-origin:0 0;transform:scale(' + s + ')';
+        wrap.innerHTML = D.bookCard.html; var c0 = wrap.firstElementChild;
+        if (c0) { c0.style.left = '0px'; c0.style.top = '0px'; c0.style.visibility = ''; c0.style.cursor = ''; }
+        [c0].concat([].slice.call(wrap.querySelectorAll('*'))).forEach(function (e) { if (e && e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
+        cover.style.overflow = 'visible'; cover.appendChild(wrap);
+      }
+    }
+    if (k === 'B3-2') {
+      var rv = ts.filter(function (t) { return /^(등본을 떼보니|따로 사는데|주민센터에서)/.test(textOf(t)); }).sort(byY);
+      rv.forEach(function (t, i) { if (b.reviews[i]) setText(t, b.reviews[i][0]); });
+      var lk = ts.filter(function (t) { return /^공감 \d+$/.test(textOf(t)); }).sort(byY);
+      lk.forEach(function (t, i) { if (b.reviews[i]) setText(t, '공감 ' + b.reviews[i][1]); });
+    }
+    if (k === 'B3-3') {
+      var qs2 = ts.filter(function (t) { var r = api.rel(t, scr); return r.x > 80 && r.x < 90 && /\?$/.test(textOf(t)); }).sort(byY);
+      qs2.forEach(function (t, i) { if (b.similar[i]) setText(t, b.similar[i][0]); });
+      var cats = ts.filter(function (t) { var r = api.rel(t, scr); return r.x > 80 && r.x < 90 && /^(가입 판단|금액 설계|가입 후)$/.test(textOf(t)); }).sort(byY);
+      cats.forEach(function (t, i) { if (b.similar[i]) setText(t, b.similar[i][1]); });
+    }
+  }
   function extras(scr, k, api) {
     // 달력: 아무 날이나 고르기
     if (k === 'C3-3') {
@@ -848,7 +932,7 @@
       });
     }
     if (k === 'B3-2') hotText(scr, api, /^공감 \d+$/, function (el, t) {
-      var key = 'L' + api.rel(el, scr).y, n = parseInt(textOf(t).replace(/\D/g, ''), 10);
+      var key = 'L' + (D.book || '') + api.rel(el, scr).y, n = parseInt(textOf(t).replace(/\D/g, ''), 10);
       if (!el.dataset.orig) el.dataset.orig = JSON.stringify({ bg: el.style.background, sh: el.style.boxShadow, col: t.querySelector('span').style.color });
       var o = JSON.parse(el.dataset.orig);
       D.likes[key] = !D.likes[key]; setText(t, '공감 ' + (n + (D.likes[key] ? 1 : -1)));

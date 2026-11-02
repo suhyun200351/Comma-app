@@ -411,7 +411,7 @@
       var pg = div('left:0;top:0;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,#dcdcd8 0%,#f7f7f5 9%,#f7f7f5 90%,#e4e4e0 100%)');
       book.appendChild(pg); pages.push(pg);
     }
-    var front = card.cloneNode(true); front.style.left = '0px'; front.style.top = '0px'; front.style.transformOrigin = '0 50%'; front.style.margin = '0';
+    var front = card.cloneNode(true); front.style.left = '0px'; front.style.top = '0px'; front.style.transformOrigin = '0 50%'; front.style.margin = '0'; [front].concat([].slice.call(front.querySelectorAll('*'))).forEach(function (e) { if (e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
     var backC = div('left:0;top:0;width:100%;height:100%;transform-origin:0 50%;background:linear-gradient(90deg,#e6e6e2,#f7f7f5 14%)');
     book.appendChild(backC); book.appendChild(front);
     card.style.visibility = 'hidden';
@@ -437,7 +437,7 @@
     anim(backC, [{ visibility: 'visible' }, { visibility: 'hidden' }], { duration: 1, delay: C1 + 170, fill: 'forwards' });
     anim(front, [{ transform: P + 'rotateY(-90deg)' }, { transform: P + 'rotateY(0deg)' }], { duration: 190, delay: C1 + 170, easing: 'ease-out', fill: 'forwards' });
     // 상세 화면 표지 자리(24, 196 · 폭 167.8)로 내려앉음
-    var DW = 167.84, DS = DW / w, M0 = C1 - 40, MD = 560;
+    var DS = window.COMMA_BOOK_SCALE(w, h), M0 = C1 - 40, MD = 560;
     anim(book, [{ transform: 'translate(' + tx + 'px,' + ty + 'px) scale(' + S1 + ')' }, { transform: 'translate(' + (24 - x) + 'px,' + (196 - y) + 'px) scale(' + DS + ')' }], { duration: MD, delay: M0, easing: EZ, fill: 'forwards' });
     anim(inside, [{ boxShadow: '0 18px 40px rgba(0,0,0,.45)' }, { boxShadow: '0 0 0 rgba(0,0,0,0)' }], { duration: MD, delay: M0, fill: 'forwards' });
     var NAV = M0 + MD - 460;
@@ -449,15 +449,26 @@
     setTimeout(function () { anim(L, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }); setTimeout(function () { L.remove(); busyFx = false; }, 130); }, M0 + MD + 20);
   }
   var BOOK_NAV = false;
+  // 홈의 질문책 7권: 어느 책을 눌러도 펼쳐지며 그 책의 상세(B3-1)로
+  var BOOK_OF = { 'Frame 2087332315': 'household', 'Frame 2087332316': 'income', 'Frame 2087332318': 'interest', 'Frame 2087332317': 'pref',
+    'Frame 2087332314': 'special', 'Frame 2087332313': 'autodebit', 'Group': 'prefcheck' };
   function bookSetup(scr) {
-    var A = api(), t = A.findText(scr, /^가구원은 누구까지일까/); if (!t) return;
-    var card = A.pick(t, scr, { maxH: 220 });
+    var A = api(), g = scr.querySelector('[data-name="Group 26"]'); if (!g) return;
+    var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && BOOK_OF[c.dataset.name]; });
+    cards.forEach(function (c) { c.style.cursor = 'pointer'; });
     scr.addEventListener('click', function (e) {
-      if (RM || !card.contains(e.target) || busyFx) return;
+      var card = cards.filter(function (c) { return c.contains(e.target); })[0];
+      if (!card || busyFx) return;
       e.stopPropagation(); e.preventDefault();
+      var D = window.COMMA_DATA, id = BOOK_OF[card.dataset.name], r = A.rel(card, scr);
+      D.book = id;
+      D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: r.w, h: r.h };
+      if (RM) { A.go('B3-1'); return; }
       bookOpen(card, scr, function () { A.go('B3-1'); });
     }, true);
   }
+  // 상세 화면 표지 자리(24, 196 · 167.8 × 206)에 맞는 배율
+  window.COMMA_BOOK_SCALE = function (w, h) { return Math.min(167.84 / w, 206 / h); };
 
   /* ---------- C0-6 불러오는 중: 숫자가 올라감 ---------- */
   function loading(scr) {
