@@ -1,0 +1,35 @@
+
+@font-face{font-family:'Pretendard Variable';src:url(fonts/PretendardVariable.woff2) format('woff2-variations');font-weight:45 920;font-display:block}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#151515}
+.screen-x{overflow:hidden;-webkit-font-smoothing:antialiased;font-family:'Pretendard Variable',sans-serif;font-kerning:normal}
+.screen div,.screen img{position:absolute}
+.t{word-break:normal;overflow-wrap:normal}
+.ln{left:0;right:0;white-space:pre}
+.ln .bp{position:static;display:inline-block;width:0;height:0}
+
+html,body{margin:0;height:100%;background:#151515;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#stage{position:absolute;left:0;top:0;width:393px;height:852px;overflow:hidden;transform-origin:0 0;background:#151515}
+#stage .screen{position:absolute;left:0;top:0;width:393px;height:852px;overflow:hidden;-webkit-font-smoothing:antialiased;font-family:'Pretendard Variable',sans-serif;opacity:0;transition:opacity .2s ease-out}
+#stage .screen.in{opacity:1}
+#stage .screen div,#stage .screen img{position:absolute}
+#stage .screen .scroller{left:0;top:0;width:393px;height:852px;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#stage .screen .scroller::-webkit-scrollbar{display:none}
+#stage .screen .content{left:0;top:0;width:393px}
+#stage .screen .fixed{left:0;top:0;width:393px;pointer-events:none}
+#stage .screen .fixed.bot{height:852px;background:none}
+#stage .screen .fixed>*{pointer-events:auto}
+#stage .screen img{pointer-events:none;-webkit-user-drag:none}
+#stage .screen img.hot{pointer-events:auto}
+#stage .hot{cursor:pointer}
+#stage .hot:active{filter:brightness(1.15)}
+
+#stage .caret{position:absolute;top:12%;width:2px;height:76%;background:#d3ff31;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#stage .field::placeholder{color:#71706c}
+#stage textarea.field,#stage input.field{-webkit-user-select:text;user-select:text}
+
+/* 모션: 하프톤 그래픽 */
+#stage .gfxbox path{transform-box:fill-box;transform-origin:center;transition:fill var(--inkT,1s) ease-in-out}
+#stage .gfxbox.ink path:not([fill="#F7F7F5"]){fill:#151515}
+#stage .gfxbox .gfxin{transform-origin:50% 50%}
