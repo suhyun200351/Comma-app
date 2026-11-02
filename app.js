@@ -9,10 +9,20 @@
 
   /* ---------- fit stage to window ---------- */
   function fit() {
-    var vw = window.innerWidth, vh = window.innerHeight;
-    scale = Math.min(vw / W, vh / H);
-    if (Math.abs(vw - W) < 2 && vh >= H - 2) scale = 1;
-    stage.style.transform = 'translate(' + Math.max(0, (vw - W * scale) / 2) + 'px,' + Math.max(0, (vh - H * scale) / 2) + 'px) scale(' + scale + ')';
+    var vw = document.documentElement.clientWidth || window.innerWidth, vh = window.innerHeight;
+    if (vw < 700) {
+      // 폰: 가로 폭에 꽉 맞춤(모든 기종). 세로가 남거나 모자라면 페이지 스크롤
+      scale = vw / W;
+      stage.style.transform = 'scale(' + scale + ')';
+      document.body.style.height = Math.ceil(H * scale) + 'px';
+      document.documentElement.classList.add('phone');
+    } else {
+      // 컴퓨터 · 태블릿: 화면 안에 통째로 보이게
+      scale = Math.min(vw / W, vh / H);
+      stage.style.transform = 'translate(' + Math.max(0, (vw - W * scale) / 2) + 'px,' + Math.max(0, (vh - H * scale) / 2) + 'px) scale(' + scale + ')';
+      document.body.style.height = '';
+      document.documentElement.classList.remove('phone');
+    }
   }
   window.addEventListener('resize', fit); fit();
 
@@ -445,6 +455,8 @@
       setTimeout(function () { for (var i = 0; i < old.length; i++) if (old[i] !== scr) old[i].remove(); }, keep);
     });
     try { history.replaceState(null, '', '#' + encodeURIComponent(k)); } catch (e) {}
+    // 폰에서 페이지를 아래로 내린 채 다음 화면으로 가면 맨 위부터 보이게
+    if (document.documentElement.classList.contains('phone') && window.scrollY > 0) window.scrollTo(0, 0);
   }
 
   /* ---------- 햄버거(☰) ↔ X 모션 ---------- */

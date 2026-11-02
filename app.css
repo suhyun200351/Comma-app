@@ -33,3 +33,7 @@ html,body{margin:0;height:100%;background:#151515;overflow:hidden;overscroll-beh
 #stage .gfxbox path{transform-box:fill-box;transform-origin:center;transition:fill var(--inkT,1s) ease-in-out}
 #stage .gfxbox.ink path:not([fill="#F7F7F5"]){fill:#151515}
 #stage .gfxbox .gfxin{transform-origin:50% 50%}
+
+/* 폰: 폭 맞춤 + 세로는 페이지 스크롤 */
+html.phone,html.phone body{overflow-x:hidden;overflow-y:auto;height:auto;-webkit-overflow-scrolling:touch}
+html.phone body{position:relative}
