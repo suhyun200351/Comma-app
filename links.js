@@ -145,7 +145,7 @@
     'F-1': [[/우대조건 서류를 챙기는 날/, function () { st().e1x = false; return 'E1-1'; }, {maxH: 130}], [/^확인하기$/, 'D2-1']],
     'S-4': [[/인증 없이 직접 적을게요/, 'C0-9'], [/^다시 인증하기$/, 'C0-4']],
     'S-6': [[/^보관함$/, 'D1-3'], [/^비교하기/, compareGo]],
-    'S-7': [[/^다시 시도$/, 'BACK']]
+    'S-7': [[/^다시 시도$/, function () { return st().history.length ? 'BACK' : home(); }]]
   };
   // 같은 화면 안에서 접히고 펼쳐지는 바 (페이지 이동 대신 모션) — '출발>도착': 기준 바 글자
   var M = window.MORPH = {};
@@ -289,9 +289,9 @@
   };
 })();
 
-/* 11/3: S-7 「연결이 끊겼어요」가 30초쯤마다 갑자기 뜸(25~35초 사이 랜덤) — 굴비 실이 툭 끊겨 떨어짐. 다시 시도 → 원래 화면, 그때부터 다시 30초쯤 */
+/* 11/3: S-7 「연결이 끊겼어요」가 1분쯤마다 갑자기 뜸(50~70초 사이 랜덤) — 굴비 실이 툭 끊겨 떨어짐. 다시 시도 → 원래 화면, 그때부터 다시 30초쯤 */
 (function () {
-  var next = function () { return Date.now() + 25000 + Math.random() * 10000; }, at = next();
+  var next = function () { return Date.now() + 50000 + Math.random() * 20000; }, at = next();   // 1분쯤(50~70초)
   setInterval(function () {
     var key = window.COMMA && window.COMMA.key;
     if (!key || key === 'S-7') { at = next(); return; }

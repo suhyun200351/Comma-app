@@ -559,7 +559,9 @@
   window.addEventListener('load', function () {
     document.fonts.ready.then(function () {
       var h = decodeURIComponent((location.hash || '').slice(1));
-      show(window.SCREENS[h] ? h : 'A-1');
+      // 11/3: 앱을 열면 늘 처음(A-1)부터 — 주소에 #S-7 같은 화면이 남아 있어도 무시(연결 끊김 화면에 갇히던 문제). 시험용으로만 ?dev 붙이면 # 화면으로 바로
+      var dev = /[?&]dev\b/.test(location.search);
+      show(dev && window.SCREENS[h] ? h : 'A-1');
     });
   });
 })();
