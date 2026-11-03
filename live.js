@@ -417,7 +417,7 @@
       var m = txt.match(/^10월 (\d+)일$/); if (m) D.day = +m[1];
     });
     if (k === 'B-0' || k === 'B2-1') myBooks(scr, api);
-    if (/^B3-[123]$/.test(k)) bookContent(scr, k, api);
+    if (/^B3-[123]$/.test(k)) { bookLook(scr); bookContent(scr, k, api); }
     extras(scr, k, api);
     // 지금 값으로 미리 골라 두기
     if (/^(C0-12|C0-17|E0-7|C0-19)$/.test(k)) { preselect(scr, 'Option', D.house); preselect(scr, 'Chip', D.head); }
@@ -912,6 +912,15 @@
     return { no: 8 + i, title: [['내가 남긴', 1], [' 질문']], q: m.q, exp: base.exp, reviews: base.reviews, similar: base.similar,
       body: ['※ 내가 남긴 질문이에요. 마이 › 내 질문에서도 볼 수 있어요.', 'A: 아직 답변이 없어요. 먼저 해 본 사람들이 답을', '달면 알림으로 알려 드릴게요.', '그동안 아래 사람들의 경험과 비슷한 질문을', '먼저 살펴보세요.'] };
   }
+  /* 책 분류(가입 후 · 금액 설계 · 가입 판단)마다 헤더 Book 1·2·3과 뒤 무늬(− 하늘 · % 보라 · + 산호) — 수현 피그마 B3 */
+  var CAT_OF = { household: '가입 판단', income: '가입 판단', interest: '금액 설계', pref: '금액 설계', prefcheck: '금액 설계', special: '가입 후', autodebit: '가입 후' };
+  var CAT_NO = { '가입 후': 1, '금액 설계': 2, '가입 판단': 3 };
+  function bookLook(scr) {
+    var id = D.book || 'household', cat = /^my:/.test(id) ? ((D.myBooks || [])[+id.slice(3)] || {}).cat : CAT_OF[id];
+    var no = CAT_NO[cat] || 3;
+    var bg = scr.querySelector('.bookbg'); if (bg) bg.className = 'bookbg b' + no;
+    [].forEach.call(scr.querySelectorAll('.t'), function (t) { if (/^Book \d+$/.test(textOf(t))) setText(t, 'Book ' + no); });
+  }
   function bookContent(scr, k, api) {
     var b = /^my:/.test(D.book || '') ? myBookData(+D.book.slice(3)) : BOOKS[D.book];
     var mine = (D.bookAns || {})[D.book || 'household'] || [];
@@ -920,7 +929,6 @@
     var byY = function (a, c) { return api.rel(a, scr).y - api.rel(c, scr).y; };
     ts.forEach(function (t) {
       var x = textOf(t);
-      if (x === 'Book 1' && b.no) setText(t, 'Book ' + b.no);
       if (/^사람들의 경험 \d+$/.test(x)) setText(t, '사람들의 경험 ' + ((b.exp != null ? b.exp : +x.replace(/\D/g, '')) + mine.length));
     });
     if (k === 'B3-1' && !b.household) {

@@ -37,3 +37,7 @@ html,body{margin:0;height:100%;background:#151515;overflow:hidden;overscroll-beh
 /* 폰: 폭 맞춤 + 세로는 페이지 스크롤 */
 html.phone,html.phone body{overflow-x:hidden;overflow-y:auto;height:auto;-webkit-overflow-scrolling:touch}
 html.phone body{position:relative;overflow:hidden}
+/* 질문책 상세 배경: 책 분류마다 부호 무늬 (수현 피그마 11/3) */
+#stage .screen .bookbg{position:absolute;left:0;top:59px;width:393px;height:852px;pointer-events:none;background:url(bookbg3.webp?v=1) 0 0/393px 851px no-repeat}
+#stage .screen .bookbg.b1{background-image:url(bookbg1.webp?v=1);background-size:393px 852px}
+#stage .screen .bookbg.b2{background-image:url(bookbg2.webp?v=1);background-size:386px 852px;background-position:3px 0}
