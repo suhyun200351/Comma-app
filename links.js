@@ -29,10 +29,10 @@
   var postQ = function (api, scr) {
     var D = window.COMMA_DATA; // 질문 남기기는 로그인 없이 바로 (로그인 모달은 계획에서만)
     var q = D.question.trim();
-    // 등록 버튼: 유튜브 구독처럼 꾹 → 통 + 부호 폭죽, 잠깐 보여 주고 완료 모달로
-    if (q && window.COMMA_CHEER && api && scr && !postQ.busy) {
+    // 등록 버튼: 유튜브 구독처럼 색만 바뀜(서브색이 차오름), 잠깐 보여 주고 완료 모달로
+    if (q && window.COMMA_FILL && api && scr && !postQ.busy) {
       var bs = [].filter.call(scr.querySelectorAll('.hot'), function (e) { return /^질문 남기기$/.test((e.textContent || '').trim()); });
-      if (bs.length) { postQ.busy = true; window.COMMA_CHEER(bs[bs.length - 1], { n: 22, ringScale: '1.25' }); setTimeout(function () { postQ.busy = false; var to = postQ(); if (to) api.go(to); }, 560); return; }
+      if (bs.length) { postQ.busy = true; (window.COMMA_FILL || window.COMMA_CHEER)(bs[bs.length - 1]); setTimeout(function () { postQ.busy = false; var to = postQ(); if (to) api.go(to); }, 560); return; }
     }
     if (q) {
       D.posted.push(q);

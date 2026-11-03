@@ -805,6 +805,14 @@
 
   /* ---------- 담기 · 공감 축하 (유튜브 구독 누를 때처럼): 버튼이 눌렸다 튀고, 서브색 부호가 사방으로 톡
      켤 때만 부름 — 빼거나 취소할 땐 부르지 않음 ---------- */
+  /* 질문 등록 버튼: 꿀렁 없이 색만 바뀜 (유튜브 구독 버튼처럼) — 서브색 그라데이션이 왼쪽→오른쪽으로 차오름 */
+  window.COMMA_FILL = function (el) {
+    if (!el || RM) return;
+    var ov = div('left:0;top:0;width:100%;height:100%;pointer-events:none;background:linear-gradient(90deg,#EFA6A3,#C8C5FB 50%,#7DF7FD)');
+    el.insertBefore(ov, el.firstChild);
+    anim(ov, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], { duration: 340, easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'forwards' });
+    [].forEach.call(el.querySelectorAll('span'), function (sp) { sp.style.transition = 'color .25s'; sp.style.color = 'rgb(21,21,21)'; });
+  };
   window.COMMA_CHEER = function (el, o) {
     if (!el || RM) return; o = o || {};
     var scr = screenOf(el); if (!scr) return;
@@ -858,11 +866,6 @@
     if (k === 'C0-6') loading(scr);
     if (k === 'C3-5') planCard(scr, info);
     if (k === 'B1-5') stepResult(scr, info.back);
-    if (k === 'B3-7' && !RM) setTimeout(function () { // 질문을 남겼어요: 모달이 통 튀며 부호 폭죽
-      var t = [].filter.call(scr.querySelectorAll('.t'), function (x) { return /^질문을 남겼어요$/.test(txt(x)); })[0]; if (!t || !window.COMMA_CHEER) return;
-      var bx = t.parentElement; while (bx && bx.parentElement && api().rel(bx, scr).h < 180) bx = bx.parentElement;
-      window.COMMA_CHEER(bx || t, { n: 28, ringScale: '1.06' });
-    }, 220);
     if ((k === 'B-0' || k === 'B2-1')) bookSetup(scr);
     if (RM) return null;
     var isModal = !!modalOf(scr), wasModal = !!modalOf(prev);
