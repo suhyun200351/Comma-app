@@ -762,6 +762,7 @@
       c.removeAttribute('data-drop');
       anim(c, [{ opacity: 0, translate: '0 -260px', rotate: '-24deg', scale: '1.15' }, { opacity: 1, translate: '0 10px', rotate: '3deg', scale: '1', offset: .7 }, { translate: '0 0', rotate: c.style.rotate || '0deg' }],
         { duration: 900, delay: 500 + i * 120, easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'backwards' });
+      setTimeout(function () { if (c.isConnected && window.COMMA_CHEER) window.COMMA_CHEER(c, { n: 24, ringScale: '1.12' }); }, 1060 + i * 120); // 꽂히는 순간 부호 폭죽
       setTimeout(function () { if (c.isConnected && window.COMMA_TOAST) window.COMMA_TOAST('내 질문이 질문책에 꽂혔어요'); }, 1400);
     });
     if (!blocks.length) return;
@@ -857,6 +858,11 @@
     if (k === 'C0-6') loading(scr);
     if (k === 'C3-5') planCard(scr, info);
     if (k === 'B1-5') stepResult(scr, info.back);
+    if (k === 'B3-7' && !RM) setTimeout(function () { // 질문을 남겼어요: 모달이 통 튀며 부호 폭죽
+      var t = [].filter.call(scr.querySelectorAll('.t'), function (x) { return /^질문을 남겼어요$/.test(txt(x)); })[0]; if (!t || !window.COMMA_CHEER) return;
+      var bx = t.parentElement; while (bx && bx.parentElement && api().rel(bx, scr).h < 180) bx = bx.parentElement;
+      window.COMMA_CHEER(bx || t, { n: 28, ringScale: '1.06' });
+    }, 220);
     if ((k === 'B-0' || k === 'B2-1')) bookSetup(scr);
     if (RM) return null;
     var isModal = !!modalOf(scr), wasModal = !!modalOf(prev);

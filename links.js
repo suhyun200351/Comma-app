@@ -26,9 +26,14 @@
   var pickD = function (n) { return function () { window.COMMA_DATA.pick = n; return 'D2-1'; }; };
   var step = function (n, to) { return function () { window.COMMA_DATA.steps[n] = true; return to; }; };
   // 질문 등록: 내 질문 목록 + 홈 질문책에 내 책 한 권 (언제 궁금한지에 따라 서브 색)
-  var postQ = function () {
-    var D = window.COMMA_DATA; if (!st().loggedIn) return 'B3-6';
+  var postQ = function (api, scr) {
+    var D = window.COMMA_DATA; // 질문 남기기는 로그인 없이 바로 (로그인 모달은 계획에서만)
     var q = D.question.trim();
+    // 등록 버튼: 유튜브 구독처럼 꾹 → 통 + 부호 폭죽, 잠깐 보여 주고 완료 모달로
+    if (q && window.COMMA_CHEER && api && scr && !postQ.busy) {
+      var bs = [].filter.call(scr.querySelectorAll('.hot'), function (e) { return /^질문 남기기$/.test((e.textContent || '').trim()); });
+      if (bs.length) { postQ.busy = true; window.COMMA_CHEER(bs[bs.length - 1], { n: 22, ringScale: '1.25' }); setTimeout(function () { postQ.busy = false; var to = postQ(); if (to) api.go(to); }, 560); return; }
+    }
     if (q) {
       D.posted.push(q);
       var cat = D.when === '금액 정하기' ? '금액 설계' : D.when === '가입 후' ? '가입 후' : '가입 판단';
@@ -38,7 +43,7 @@
     return 'B3-7';
   };
   // 로그인해야 볼 수 있는 화면
-  window.LOGIN_ONLY = /^(E0-[2-8]|E1-1|E3-1|F-1|F-1′|S-5)$/;
+  window.LOGIN_ONLY = /^(E0-[2-8]|E1-1|F-1|F-1′|S-5)$/; // E3-1 내 질문은 로그인 없이도 (질문 남긴 뒤 「내 질문 보기」)
   // 비교하기 (0): 보관함에 담은 게 없으면 넘어가지 않고 알려 줌
   var compareGo = function (api, scr) {
     var D = window.COMMA_DATA, n = Object.keys(D.compare).filter(function (x) { return D.compare[x]; }).length;
@@ -71,7 +76,7 @@
     'B3-4': [[/^질문 남기기$/, postQ, {idx: 1}]],
     'B3-5': [[/^질문 남기기$/, postQ, {idx: 1}]],
     'B3-6': [[/^돌아가기$/, 'BACK'], [/^로그인하기$/, toLogin('B3-4')]],
-    'B3-7': [[/^닫기$/, home], [/^내 질문 보기$/, 'E3-1']],
+    'B3-7': [[/^닫기$/, home], [/^내 질문 보기$/, home]], // 둘 다 홈으로 → 내 질문책이 떨어져 꽂히는 걸 보여 줌
     // ---- C0 ----
     'C0-1': c0top(false).concat([[/^적금$/, planOpen, {maxH: 90}]]),
     'C0-1@in': c0top(true).concat([[/^적금$/, planOpen, {maxH: 90}]]),

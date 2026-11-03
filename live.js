@@ -806,7 +806,7 @@
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
       var v = ((ta && ta.value) || '').trim();
-      if (!window.COMMA.loggedIn) { toast('로그인하면 답변을 남길 수 있어요'); setTimeout(function () { window.COMMA.afterLogin = k; api.go('A-1'); }, 700); return; }
+      // 답변도 로그인 없이 바로 남김
       if (!v) { toast('답변을 먼저 적어 주세요'); if (window.COMMA_SHAKE) window.COMMA_SHAKE(bar.querySelector('[data-name="Frame 2087332249"]') || bar, 4); return; }
       var id = D.book || 'household';
       (D.bookAns = D.bookAns || {})[id] = [v].concat(D.bookAns[id] || []);
