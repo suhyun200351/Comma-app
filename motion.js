@@ -158,44 +158,76 @@
   }
   window.COMMA_GFX = gfxInit;
 
-  /* S-7 연결 끊김: 굴비가 흔들리며 들어오다 실이 팽팽해지고 툭 끊겨 떨어짐 (11/3) */
+  /* S-7 연결 끊김 (11/3 2차): 굴비가 곡선으로 휘는 끈에 매달려 흔들흔들 → 세 번째로 왼쪽 위로 올라간 순간 끈이 툭 끊김
+     → 아래 굴비는 왼쪽으로 기울며 뚝 떨어지고, 윗끈은 채찍처럼 휘며 튕겨 올라가 출렁이다 멈춤 */
   function fishCut(box, inn) {
     var svg = inn.querySelector('svg'); if (!svg) return;
-    var NS = 'http://www.w3.org/2000/svg', CUT = 150, SX = 72.4;   // 실 끊기는 높이(피그마 좌표 0~271)
-    var gUp = svg.querySelector('g.fup'), gDn = svg.querySelector('g.fdn');
-    if (!gUp) {
-      gUp = document.createElementNS(NS, 'g'); gUp.setAttribute('class', 'fup');
-      gDn = document.createElementNS(NS, 'g'); gDn.setAttribute('class', 'fdn');
+    if (svg._fishRaf) cancelAnimationFrame(svg._fishRaf);
+    var NS = 'http://www.w3.org/2000/svg', AX = 72.45, LEN = 205.3, SC = .73;   // 끈 위끝 x · 끈 길이 · 끊기는 자리(위에서 73%)
+    if (!svg._fish) {
+      var rope = [], fishG = document.createElementNS(NS, 'g');
       [].slice.call(svg.querySelectorAll('path')).forEach(function (p) {
-        var b; try { b = p.getBBox(); } catch (e) { b = { y: 999, height: 0 }; }
-        var up = (p.getAttribute('fill') || '').toUpperCase() === '#A9A8A3' && b.y + b.height / 2 < CUT;
-        (up ? gUp : gDn).appendChild(p);
+        var b; try { b = p.getBBox(); } catch (e) { b = { x: 0, y: 999, width: 0, height: 0 }; }
+        var isRope = (p.getAttribute('fill') || '').toUpperCase() === '#A9A8A3' && b.x > 71 && b.x + b.width < 73.6 && b.y + b.height < 206;
+        if (isRope) rope.push({ p: p, cy: b.y + b.height / 2, s: (b.y + b.height / 2) / LEN }); else fishG.appendChild(p);
       });
-      svg.appendChild(gDn); svg.appendChild(gUp);
-      [gUp, gDn].forEach(function (g) { g.style.transformBox = 'view-box'; });
-      gUp.style.transformOrigin = SX + 'px 0px'; gDn.style.transformOrigin = SX + 'px 238px';
+      svg.appendChild(fishG); rope.forEach(function (r) { svg.appendChild(r.p); });
+      [fishG].concat(rope.map(function (r) { return r.p; })).forEach(function (e) { e.style.transformBox = 'view-box'; e.style.transformOrigin = '0 0'; });   // app.css의 fill-box를 덮어씀(속성 transform 좌표가 어긋나지 않게)
+      svg._fish = { rope: rope, fishG: fishG };
     }
-    gDn.getAnimations().forEach(function (a) { a.cancel(); });
-    var D = 1700, T = 560;   // 끊기는 순간 (등장 흔들림 도중)
-    // 전체: 흔들리며 등장 → 끊긴 뒤 윗실만 남아 잦아듦
-    anim(inn, [{ rotate: '15deg', easing: 'ease-out' }, { rotate: '-9deg', offset: .3, easing: 'ease-in-out' }, { rotate: '5deg', offset: .5, easing: 'ease-in-out' }, { rotate: '-2.5deg', offset: .7, easing: 'ease-in-out' }, { rotate: '1deg', offset: .86, easing: 'ease-in-out' }, { rotate: '0deg' }], { duration: D });
-    // 윗실: 팽팽하게 늘어났다가 툭 → 위로 튕겨 올라가 출렁
-    var q = T / D;
-    anim(gUp, [{ transform: 'scaleY(1)', easing: 'ease-in' }, { transform: 'scaleY(1.03)', offset: q - .02, easing: 'ease-out' }, { transform: 'scaleY(.7)', offset: q + .07, easing: 'ease-in-out' },
-      { transform: 'scaleY(.86)', offset: q + .2, easing: 'ease-in-out' }, { transform: 'scaleY(.78)', offset: q + .33, easing: 'ease-in-out' }, { transform: 'scaleY(.81)' }], { duration: D, fill: 'forwards' });
-    // 굴비: 파르르 떨며 당겨짐 → 끊기는 순간 살짝 튀어 오른 뒤 기울며 뚝 떨어짐
-    anim(gDn, [{ transform: 'translate(0px,0px) rotate(0deg)' }, { transform: 'translate(0px,2px) rotate(0deg)', offset: q * .55 }, { transform: 'translate(1.2px,4px) rotate(1deg)', offset: q * .7 },
-      { transform: 'translate(-1.2px,3px) rotate(-1deg)', offset: q * .8 }, { transform: 'translate(1px,5px) rotate(1deg)', offset: q * .9 }, { transform: 'translate(0px,6px) rotate(0deg)', offset: q, easing: 'cubic-bezier(.2,.7,.4,1)' },
-      { transform: 'translate(-3px,-10px) rotate(-7deg)', offset: q + .07, easing: 'cubic-bezier(.55,0,1,.6)' }, { transform: 'translate(-22px,640px) rotate(-42deg)' }], { duration: D, fill: 'forwards' });
-    anim(gDn, [{ opacity: 1 }, { opacity: 0 }], { duration: 520, delay: T + 260, easing: 'ease-in', fill: 'forwards' });
-    // 끊긴 자리: 실 부스러기 몇 개
-    for (var i = 0; i < 5; i++) {
-      var bit = document.createElementNS(NS, 'rect');
-      bit.setAttribute('x', SX - .7); bit.setAttribute('y', CUT - 2); bit.setAttribute('width', 1.4); bit.setAttribute('height', 3.6); bit.setAttribute('fill', i % 2 ? '#A9A8A3' : '#D3FF31');
-      bit.style.transformBox = 'fill-box'; bit.style.transformOrigin = 'center'; svg.appendChild(bit);
-      var a = (i / 5) * Math.PI * 2 + Math.random(), d = 10 + Math.random() * 10;
-      (function (b) { var an = anim(b, [{ opacity: 0, transform: 'translate(0,0) rotate(0deg)' }, { opacity: 1, transform: 'translate(0,0) rotate(0deg)', offset: .01 }, { opacity: 0, transform: 'translate(' + (Math.cos(a) * d).toFixed(1) + 'px,' + (Math.sin(a) * d + 6).toFixed(1) + 'px) rotate(' + (200 * (Math.random() - .5)).toFixed(0) + 'deg)' }], { duration: 520, delay: T, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'both' }); if (an) an.finished.then(function () { b.remove(); }, function () {}); })(bit);
+    var F = svg._fish, rope = F.rope, fishG = F.fishG;
+    // 다시 들어올 때를 위해 처음 상태로
+    var oldFall = svg.querySelector('g.ffall'); if (oldFall) { while (oldFall.firstChild) svg.insertBefore(oldFall.firstChild, oldFall); oldFall.remove(); }
+    svg.appendChild(fishG); fishG.removeAttribute('transform'); fishG.style.opacity = '';
+    rope.forEach(function (r) { svg.appendChild(r.p); r.p.style.opacity = ''; });
+    var D2R = Math.PI / 180, P = 1250, TC = 2 * P;   // 흔들림 한 번 1.25초 · 세 번째 왼쪽 꼭대기에서 끊김
+    function bez(A, C, E, u) { var v = 1 - u; return { x: v * v * A.x + 2 * u * v * C.x + u * u * E.x, y: v * v * A.y + 2 * u * v * C.y + u * u * E.y }; }
+    function tan(A, C, E, u) { var dx = 2 * (1 - u) * (C.x - A.x) + 2 * u * (E.x - C.x), dy = 2 * (1 - u) * (C.y - A.y) + 2 * u * (E.y - C.y); return Math.atan2(dy, dx) / D2R - 90; }
+    function place(r, pt, ang) { r.p.setAttribute('transform', 'translate(' + (pt.x - AX).toFixed(2) + ' ' + (pt.y - r.cy).toFixed(2) + ') rotate(' + ang.toFixed(1) + ' ' + AX + ' ' + r.cy.toFixed(2) + ')'); }
+    var A0 = { x: AX, y: 0 };
+    function shape(t) {   // 끊기기 전: 끝은 진자, 가운데는 늦게 따라와 활처럼 휨
+      var w = 2 * Math.PI / P, amp = (15 + 10 * Math.min(t / TC, 1)) * D2R, th = amp * Math.cos(w * t), dth = -amp * w * Math.sin(w * t);   // dth: 1ms당 각도
+      var E = { x: AX - LEN * Math.sin(th), y: LEN * Math.cos(th) };
+      var ph = .32 * th - 170 * dth, C = { x: AX - LEN * .5 * Math.sin(ph), y: LEN * .5 * Math.cos(ph) };
+      return { E: E, C: C };
     }
+    var t0 = performance.now(), cut = null, fall = null, bits = [];
+    function frame(now) {
+      if (!svg.isConnected) return;
+      var t = now - t0;
+      if (t < TC) {
+        var S = shape(t);
+        rope.forEach(function (r) { place(r, bez(A0, S.C, S.E, r.s), tan(A0, S.C, S.E, r.s)); });
+        fishG.setAttribute('transform', 'translate(' + (S.E.x - AX).toFixed(2) + ' ' + (S.E.y - LEN).toFixed(2) + ') rotate(' + tan(A0, S.C, S.E, 1).toFixed(1) + ' ' + AX + ' ' + LEN + ')');
+      } else {
+        if (!cut) {   // 툭 — 아래쪽 끈 + 굴비를 한 덩어리로 떼어 냄
+          var S0 = shape(TC); cut = { E: bez(A0, S0.C, S0.E, SC), C: bez(A0, S0.C, S0.E, SC / 2), tilt: tan(A0, S0.C, S0.E, 1) };
+          fall = document.createElementNS(NS, 'g'); fall.setAttribute('class', 'ffall'); fall.style.transformBox = 'view-box'; fall.style.transformOrigin = '0 0'; svg.appendChild(fall);
+          rope.forEach(function (r) { if (r.s >= SC) fall.appendChild(r.p); }); fall.appendChild(fishG);
+          cut.pivot = { x: S0.E.x, y: S0.E.y + 30 };
+          for (var i = 0; i < 6; i++) {
+            var bit = document.createElementNS(NS, 'rect'); bit.setAttribute('width', 1.4); bit.setAttribute('height', 3.6); bit.setAttribute('fill', i % 2 ? '#A9A8A3' : '#D3FF31'); bit.style.transformBox = 'view-box'; bit.style.transformOrigin = '0 0';
+            svg.appendChild(bit); var ag = Math.random() * Math.PI * 2; bits.push({ el: bit, vx: Math.cos(ag) * (30 + Math.random() * 40), vy: Math.sin(ag) * (30 + Math.random() * 40) - 30, r: Math.random() * 360, vr: (Math.random() - .5) * 900 });
+          }
+        }
+        var q = (t - TC) / 1000;
+        // 아래: 살짝 튀어 오른 뒤 왼쪽으로 기울며 뚝
+        var fx = -28 * q, fy = -45 * q + .5 * 1500 * q * q, fr = 70 * q + 40 * q * q;
+        fall.setAttribute('transform', 'translate(' + fx.toFixed(2) + ' ' + fy.toFixed(2) + ') rotate(' + fr.toFixed(1) + ' ' + cut.pivot.x.toFixed(1) + ' ' + cut.pivot.y.toFixed(1) + ')');
+        fall.style.opacity = Math.max(0, 1 - Math.max(0, q - .3) / .4).toFixed(3);
+        // 위: 끊긴 끝이 채찍처럼 휘며 위로 튕겨 올라가 출렁 → 가운데로 늘어짐
+        var R = { x: AX, y: LEN * SC * .84 }, k = Math.exp(-3.2 * q), osc = Math.cos(10 * q);
+        var E2 = { x: R.x + (cut.E.x - R.x) * k * osc, y: R.y + (cut.E.y - R.y) * k * Math.cos(13 * q) - 14 * Math.exp(-5 * q) * Math.sin(13 * q) };
+        var mid = { x: (A0.x + E2.x) / 2, y: (A0.y + E2.y) / 2 }, dx = E2.x - A0.x, dy = E2.y - A0.y, dl = Math.hypot(dx, dy) || 1, wob = 22 * Math.exp(-2.6 * q) * Math.sin(11 * q + .6);
+        var C2 = { x: mid.x - dy / dl * wob, y: mid.y + dx / dl * wob };
+        rope.forEach(function (r) { if (r.s < SC) { var u = r.s / SC; place(r, bez(A0, C2, E2, u), tan(A0, C2, E2, u)); } });
+        bits.forEach(function (b) { var x = cut.E.x + b.vx * q, y = cut.E.y + b.vy * q + 300 * q * q; b.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + (b.r + b.vr * q).toFixed(0) + ')'); b.el.style.opacity = Math.max(0, 1 - q / .55).toFixed(2); });
+        if (q > .6 && bits.length) { bits.forEach(function (b) { b.el.remove(); }); bits = []; }
+        if (q > 3.2) return;
+      }
+      svg._fishRaf = requestAnimationFrame(frame);
+    }
+    svg._fishRaf = requestAnimationFrame(frame);
   }
 
   /* 처음 나타날 때 한 번 */

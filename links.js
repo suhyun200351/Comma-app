@@ -9,7 +9,7 @@
   var home = function () { return st().diagnosed ? 'B2-1' : 'B-0'; };
   window.HOME = home;
   var my = function () { return st().loggedIn ? 'E0-2' : 'E0-1'; };
-  var login = function (api) { st().loggedIn = true; st().hasInfo = Math.random() < .5; var a = st().afterLogin; if (/^C0-1(-1)?(@in)?$/.test(a || '')) a = /-1-1/.test(a) ? planOpen() : plan(); st().afterLogin = null; st().history = []; api.go(a || home()); };
+  var login = function (api) { st().loggedIn = true; st().hasInfo = true; /* 11/3: 체험 계정엔 예시 내 정보가 늘 있음(전에는 반반 랜덤이라 내 정보가 안 열릴 때가 있었음) */ var a = st().afterLogin; if (/^C0-1(-1)?(@in)?$/.test(a || '')) a = /-1-1/.test(a) ? planOpen() : plan(); st().afterLogin = null; st().history = []; api.go(a || home()); };
   var editRow = function (from, to) { return function () { st().editFrom = from; return to; }; };
   var editBack = function () { return st().editFrom || 'C0-14'; };
   var list01 = function () { return 'C1-5-1'; }; // 01 고르기는 보관함 없이 전체 목록에서 체크로 고름
