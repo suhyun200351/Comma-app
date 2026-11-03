@@ -489,15 +489,19 @@
   }
   // 홈 위쪽 라임 동전: 8초에 한 바퀴 천천히
   function homeCoin(scr) {
+    // 11/3: 마이 프로필 동전과 같은 그림(굵은 부호 칸 · seed 2)과 같은 움직임(7초에 한 바퀴 · 누르면 두 바퀴 휙 + 부호 톡)
     var A = api(), img = scr.querySelector('img[src$="99e387589301a343.svg"],img[src$="5cafc6a2865ad5de.svg"]'); if (!img) return;
     var r = A.rel(img, scr), k = r.w / 104, S = 120 * k;
-    var th = 0, t0 = performance.now();
-    sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinPal(th, 1).cur; } });
+    var th = 0, t0 = performance.now(), boost = null;
+    var sp = sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinPal(th, 1).cur; } });
     var cv = canvasAt(scr, r.x + r.w / 2 - S / 2, r.y + r.h / 2 - S / 2, S, S); img.style.visibility = 'hidden';
+    cv.c.style.cursor = 'pointer';
+    cv.c.addEventListener('pointerdown', function () { if (RM) return; if (boost === null) boost = performance.now(); if (sp && sp.burst) sp.burst(18); });
     (function frame(now) {
       if (!cv.c.isConnected) return;
-      th = RM ? 0 : ((now - t0) / 8000) * Math.PI * 2;
-      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 4.2, LIME, L7, th, 3, coinPal(th, 1)); cv.ctx.restore();
+      th = RM ? 0 : ((now - t0) / 7000) * Math.PI * 2;
+      if (boost !== null) { var bq = (now - boost) / 1100; if (bq < 1) th += Math.PI * 4 * (1 - Math.pow(1 - bq, 3)); else { t0 -= 7000 * 2; boost = null; th = ((now - t0) / 7000) * Math.PI * 2; } }
+      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 7.8, LIME, L7, th, 2, coinPal(th, 1)); cv.ctx.restore();
       if (!RM) requestAnimationFrame(frame);
     })(t0);
   }
@@ -647,7 +651,9 @@
     return l;
   }
   // 그림 한 장짜리 책(그림자 여백 포함)은 실제 책 부분만 — [왼, 위, 폭, 높이]
-  var INSET = { '53e178108df4c379': [16, 12, 122, 197], '7c3f8fb00fe61452': [12, 12, 132, 213], '3452465a5d88b668': [16, 12, 116, 165], 'e3e3428de60506a8': [16, 12, 133, 187] };
+  var INSET = { '53e178108df4c379': [16, 12, 122, 197], '7c3f8fb00fe61452': [12, 12, 132, 213], '3452465a5d88b668': [16, 12, 116, 165], 'e3e3428de60506a8': [16, 12, 133, 187],
+    // 11/3 피그마 다시 뽑으며 그림 이름이 바뀐 것(B-0 · B2-1 공통)
+    'c0a05da48486909d': [16, 12, 122, 197], 'd19b39cee1632320': [16, 12, 116, 165], 'c820660227e028ea': [16, 12, 133, 187] };
   function cardInset(c) {
     var m = c.tagName === 'IMG' && /([0-9a-f]{16})\.png/.exec(c.getAttribute('src') || ''), v = m && INSET[m[1]];
     return v ? v.slice() : [0, 0, c.offsetWidth, c.offsetHeight];
