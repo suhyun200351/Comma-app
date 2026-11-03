@@ -446,14 +446,32 @@
     state.key = k;
     bind(scr, k);
     if (window.ENHANCE && window.ENHANCE[k]) { try { window.ENHANCE[k](scr, api); } catch (e) { console.error(e); } }
-    burger(old, scr, k);
+    // 메뉴(☰): 열 때 오른쪽에서 밀려 들어오고, 닫을 때 오른쪽으로 밀려 나감
+    var pk = (prevScr && prevScr.dataset && prevScr.dataset.key) || prevKey || '';
+    var slide = !prevScr ? '' : (/^B0/.test(k) && !/^B0/.test(pk)) ? 'in' : (!/^B0/.test(k) && /^B0/.test(pk)) ? 'out' : '';
+    if (!slide) burger(old, scr, k);
     // 모션(motion.js): 화면 등장 · 그래픽 · 모달 · 카드 뒤집기
     var mo = null;
-    if (window.COMMA_MOTION) { try { mo = window.COMMA_MOTION(scr, k, { prev: prevScr, prevKey: prevKey, back: !!opts.back, replace: !!opts.replace }) || null; } catch (e) { console.error('MOTION', k, e); } }
+    if (window.COMMA_MOTION) { try { mo = window.COMMA_MOTION(scr, k, { prev: prevScr, prevKey: prevKey, back: !!opts.back, replace: !!opts.replace || !!slide }) || null; } catch (e) { console.error('MOTION', k, e); } }
+    if (slide) mo = null;
     if (mo && mo.under && prevScr && prevScr.parentNode === stage) stage.insertBefore(scr, prevScr);
     if (mo && mo.instant) { scr.style.transition = 'none'; scr.classList.add('in'); }
     if (mo && mo.fade) scr.style.transition = 'opacity ' + mo.fade + 'ms ease-out';
     var keep = (mo && mo.keep) || 220;
+    var SL = 'cubic-bezier(.22,.8,.2,1)';
+    if (slide === 'in') {
+      scr.style.transition = 'none'; scr.classList.add('in');
+      scr.animate([{ transform: 'translateX(393px)' }, { transform: 'translateX(0)' }], { duration: 440, easing: SL });
+      if (prevScr) prevScr.animate([{ transform: 'translateX(0)', filter: 'brightness(1)' }, { transform: 'translateX(-60px)', filter: 'brightness(.55)' }], { duration: 440, easing: SL, fill: 'forwards' });
+      keep = 460;
+    } else if (slide === 'out' && prevScr && prevScr.parentNode === stage) {
+      stage.insertBefore(scr, prevScr); scr.style.transition = 'none'; scr.classList.add('in');
+      var SO = 'cubic-bezier(.45,0,.2,1)';
+      scr.animate([{ transform: 'translateX(-60px)', filter: 'brightness(.55)' }, { transform: 'translateX(0)', filter: 'brightness(1)' }], { duration: 440, easing: SO });
+      prevScr.style.transition = 'none';
+      prevScr.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(393px)' }], { duration: 440, easing: SO, fill: 'forwards' });
+      keep = 460;
+    }
     requestAnimationFrame(function () {
       scr.classList.add('in');
       setTimeout(function () { for (var i = 0; i < old.length; i++) if (old[i] !== scr) old[i].remove(); }, keep);

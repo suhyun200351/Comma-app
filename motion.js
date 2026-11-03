@@ -103,6 +103,24 @@
 
   /* 화면에 붙을 때마다(이동 · 접힘 포함): 그래픽을 칸 단위로 바꾸고 계속 도는 움직임 시작 */
   function gfxInit(root, k) {
+    // 마이 프로필 동전: 둘레에 작은 반짝이
+    if (FX_SPARK) [].forEach.call(root.querySelectorAll('img[src$="cd9c89076f441e39.svg"]'), function (im) {
+      if (im.dataset.spk) return; var ss = screenOf(im); if (!ss) return; im.dataset.spk = 1;
+      var r = api().rel(im, ss), ax = r.x + r.w / 2, ay = r.y + r.h / 2, AR = r.w * 0.42, ath = 0;
+      var sp = sparkles(ss, ax, ay, AR, { spread: 1.75, n: 12, u: 3.2, z: 3, cur: function () { return coinPal(ath, 1).cur; } });
+      // 동전도 천천히 돌며 색이 그라데이션으로 바뀜 · 누르면 두 바퀴 휙
+      var S2 = r.w * 1.1, ak = S2 / 120, acv = canvasAt(ss, ax - S2 / 2, ay - S2 / 2, S2, S2), at0 = performance.now(), boost = null;
+      acv.c.style.zIndex = 4; acv.c.style.pointerEvents = 'none'; im.style.visibility = 'hidden';
+      (function af(now) {
+        if (!acv.c.isConnected) return;
+        ath = ((now - at0) / 7000) * Math.PI * 2;
+        if (boost !== null) { var bq = (now - boost) / 1100; if (bq < 1) ath += Math.PI * 4 * (1 - Math.pow(1 - bq, 3)); else { at0 -= 7000 * 2; boost = null; ath = ((now - at0) / 7000) * Math.PI * 2; } }
+        acv.ctx.clearRect(0, 0, S2, S2); acv.ctx.save(); acv.ctx.scale(ak, ak); drawCoin(acv.ctx, 60, 60, 50, 7.5, LIME, L7, ath, 2, coinPal(ath, 1)); acv.ctx.restore();
+        requestAnimationFrame(af);
+      })(at0);
+      var card = (im.parentElement && im.parentElement.parentElement) || im.parentElement;
+      card.addEventListener('pointerdown', function () { if (boost === null) boost = performance.now(); if (sp && sp.burst) sp.burst(18); });
+    });
     if ((k === 'B-0' || k === 'B2-1') && root.classList && root.classList.contains('screen')) homeCoin(root);
     if (!window.GFX) return;
     [].slice.call(root.querySelectorAll('img')).forEach(function (img) {
@@ -120,7 +138,22 @@
         inn.style.transformOrigin = (top.x * 100).toFixed(1) + '% 0';
         anim(inn, [{ rotate: '2.4deg', easing: SINE }, { rotate: '-2.4deg', easing: SINE }, { rotate: '2.4deg' }], { duration: 3200, delay: 1700, iterations: Infinity });
       }
-      if (kd === 'float3') { split3(box).forEach(function (g, i) { bob(g, [4, 5, 3.5][i], [3000, 3700, 4300][i], i * 400); }); floatColors(box); }
+      if (kd === 'float3') {
+        split3(box).forEach(function (g, i) { bob(g, [4, 5, 3.5][i], [3000, 3700, 4300][i], i * 400); }); floatColors(box);
+        var fs = screenOf(box);
+        if (fs && FX_SPARK) {
+          var fr = api().rel(box, fs), FW = fr.w, FH = fr.h, FI = [0, 2, 1, 3];
+          var cs3 = [[.25 * FW, .17 * FH, .24 * FW], [.75 * FW, .4 * FH, .27 * FW], [.4 * FW, .82 * FH, .33 * FW]].map(function (q) { return [fr.x + q[0], fr.y + q[1], q[2]]; });
+          var sp3 = cs3.map(function (q) { return sparkles(fs, q[0], q[1], q[2], { spread: 1.5, n: 9, u: 3.6, avoid: cs3, cur: function () { return FI[box._fidx || 0]; } }); });
+          box.style.pointerEvents = 'auto';
+          box.addEventListener('pointerdown', function (e) {
+            var bb = box.getBoundingClientRect(), sc = bb.width / FW, px = (e.clientX - bb.left) / sc + fr.x, py = (e.clientY - bb.top) / sc + fr.y, best = 0, bd = 1e9;
+            cs3.forEach(function (q, i) { var d = Math.hypot(px - q[0], py - q[1]) - q[2]; if (d < bd) { bd = d; best = i; } });
+            if (box._spin) box._spin(best);
+            if (sp3[best] && sp3[best].burst) sp3[best].burst(20);
+          });
+        }
+      }
     });
   }
   window.COMMA_GFX = gfxInit;
@@ -216,6 +249,24 @@
     var n = Math.floor((Math.abs(theta) + Math.PI / 2) / Math.PI);
     return dir < 0 ? (4 - n % 4) % 4 : n % 4;
   }
+  // 색이 바뀔 때 그라데이션처럼: 새 색이 동전 위를 대각선으로 쓸고 지나감
+  var RGB = {};
+  function rgbOf(h) { return RGB[h] || (RGB[h] = [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]); }
+  var MIXC = {};
+  function mixHex(a, b, w) {
+    var q = Math.round(w * 24) / 24; if (q <= 0) return a; if (q >= 1) return b;
+    var key = a + b + q; if (MIXC[key]) return MIXC[key];
+    var A = rgbOf(a), B = rgbOf(b);
+    return (MIXC[key] = 'rgb(' + Math.round(A[0] + (B[0] - A[0]) * q) + ',' + Math.round(A[1] + (B[1] - A[1]) * q) + ',' + Math.round(A[2] + (B[2] - A[2]) * q) + ')');
+  }
+  function sstep(x) { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); }
+  function coinPal(theta, dir) {
+    if (!FX_COLOR) return { a: COIN_SET[0], b: COIN_SET[0], t: 0, cur: 0 };
+    var p = Math.abs(theta) / Math.PI, n = Math.floor(p), f = p - n;
+    var id = function (m) { return dir < 0 ? (4 - m % 4) % 4 : m % 4; };
+    var t = sstep((f - 0.18) / 0.64);
+    return { a: COIN_SET[id(n)], b: COIN_SET[id(n + 1)], t: t, cur: t < .5 ? id(n) : id(n + 1) };
+  }
   var SPK = [{ s: '+', c: COIN_SET[3] }, { s: '%', c: COIN_SET[2] }, { s: '-', c: COIN_SET[1] }, { s: ',', c: COIN_SET[0] }];
   var SPK_OF = [3, 2, 1, 0]; // 동전 색 번호 → 그 색의 부호
   function sym(ctx, kind, x, y, u, col) {
@@ -242,16 +293,31 @@
       if (cur >= 0 && Math.random() < .55) k = SPK_OF[cur];
       else k = Math.random() < (cur >= 0 ? .25 : .12) ? 3 : Math.floor(Math.random() * 3);
       p.x = cx + Math.cos(a) * d - x0; p.y = cy + Math.sin(a) * d - y0;
+      if (o.avoid && o.avoid.some(function (q) { return Math.hypot(p.x + x0 - q[0], p.y + y0 - q[1]) < q[2] * 1.02; })) { p.t0 = now + 200; p.life = 1; p.x = -99; return p; }
       p.k = k; p.col = SPK[k].c[Math.random() < .5 ? 0 : 1];
       p.size = U * (0.7 + Math.random() * 0.9); p.life = 700 + Math.random() * 1100;
       p.t0 = now + (first ? Math.random() * 1600 : Math.random() * 500);
       p.blink = Math.random() < .35; return p;
     }
-    var t = performance.now();
+    var t = performance.now(), bs = [];
     for (var i = 0; i < N; i++) ps.push(spawn({}, t, true));
+    // 누르면 부호가 사방으로 톡 터짐
+    cv.burst = function (n, bx, by, br) {
+      var now = performance.now(); bx = (bx == null ? cx : bx) - x0; by = (by == null ? cy : by) - y0; br = br || R;
+      for (var j = 0; j < (n || 18); j++) {
+        var a = Math.random() * Math.PI * 2, k = j % 4, sp = br * (0.45 + Math.random() * (spread - 0.6));
+        bs.push({ x: bx + Math.cos(a) * br * .8, y: by + Math.sin(a) * br * .8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, k: k, col: SPK[k].c[j % 2],
+          size: U * (0.9 + Math.random() * 0.9), t0: now + Math.random() * 90, life: 650 + Math.random() * 350 });
+      }
+    };
     (function frame(now) {
       if (!cv.c.isConnected) return;
       var x = cv.ctx; x.clearRect(0, 0, w, h);
+      bs = bs.filter(function (b) {
+        var q = (now - b.t0) / b.life; if (q < 0) return true; if (q >= 1) return false;
+        var e = 1 - Math.pow(1 - q, 3); x.globalAlpha = 1 - q * q;
+        sym(x, SPK[b.k].s, b.x + b.vx * e, b.y + b.vy * e, b.size * (1 - q * .4), b.col); return true;
+      });
       ps.forEach(function (p) {
         var q = (now - p.t0) / p.life; if (q < 0) return;
         if (q >= 1) { spawn(p, now); return; }
@@ -265,25 +331,79 @@
     return cv;
   }
   // 떠 있는 동전 셋(C0-1): 하나씩 휙 돌며 색이 바뀜 (라임 → 라벤더 → 코랄 → 시안)
+  // 넓은 면에 아주 작은 부호가 자글자글 (질문책 뒤) — 바뀐 칸만 지우고 다시 그려서 가볍게
+  function starField(holder, x0, y0, w, h, o) {
+    if (!FX_SPARK) return null;
+    o = o || {};
+    var c = document.createElement('canvas'), dpr = Math.min(2, (window.devicePixelRatio || 1) * ((api().scale && api().scale()) || 1));
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); c.className = 'nostagger starfield';
+    c.style.cssText = 'position:absolute;left:' + x0 + 'px;top:' + y0 + 'px;width:' + w + 'px;height:' + h + 'px;pointer-events:none';
+    holder.insertBefore(c, holder.firstChild);
+    var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var N = o.n || Math.round(w * h / 2600), U = o.u || 3.2, ps = [];
+    function spawn(p, now, first) {
+      p.x = 6 + Math.random() * (w - 12); p.y = 6 + Math.random() * (h - 12);
+      p.k = Math.random() < .15 ? 3 : Math.floor(Math.random() * 3);
+      p.col = SPK[p.k].c[Math.random() < .5 ? 0 : 1];
+      p.size = U * (0.6 + Math.random() * 0.9); p.life = 600 + Math.random() * 1400;
+      p.t0 = now + (first ? Math.random() * 3000 : Math.random() * 1200); p.blink = Math.random() < .5; return p;
+    }
+    var t = performance.now(); for (var i = 0; i < N; i++) ps.push(spawn({}, t, true));
+    var last = 0;
+    (function frame(now) {
+      if (!c.isConnected) return;
+      if (now - last > 33) { last = now;
+        ps.forEach(function (p) {
+          var r = p.size * 0.8 + 2; x.clearRect(p.x - r, p.y - r, r * 2, r * 2);
+          var q = (now - p.t0) / p.life; if (q < 0) return;
+          if (q >= 1) { spawn(p, now); return; }
+          var al = Math.pow(Math.sin(Math.PI * q), 2) * (o.alpha || .85);
+          if (p.blink && Math.floor(q * 12) % 3 === 1) al *= .3;
+          x.globalAlpha = al; sym(x, SPK[p.k].s, p.x, p.y, p.size, p.col);
+        });
+        x.globalAlpha = 1;
+      }
+      requestAnimationFrame(frame);
+    })(t);
+    return c;
+  }
+  function screenOf(el) { while (el && !(el.classList && el.classList.contains('screen'))) el = el.parentElement; return el; }
+  // 질문책 뒤 반짝이: 책들이 놓인 칸(공통 부모) 맨 아래 층에 깔기
+  function bookStars(scr) {
+    if (!FX_SPARK || scr._stars) return;
+    var A = api(), imgs = [].filter.call(scr.querySelectorAll('img'), function (i) { return /\.png$/.test(i.getAttribute('src') || '') && A.rel(i, scr).w > 100; });
+    if (imgs.length < 2) return; scr._stars = 1;
+    var common = imgs[0].parentElement;
+    while (common && !imgs.every(function (i) { return common.contains(i); })) common = common.parentElement;
+    if (!common) return;
+    var cr = A.rel(common, scr), x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    imgs.forEach(function (i) { var r = A.rel(i, scr); x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); });
+    x0 = Math.max(0, x0 - 24); x1 = Math.min(393, x1 + 24); y0 -= 40; y1 += 40;
+    starField(common, x0 - cr.x, y0 - cr.y, x1 - x0, y1 - y0, { u: 4 });
+  }
   function floatColors(box) {
     if (!FX_COLOR || box._fc) return; box._fc = 1;
     var gs = split3(box), cs = cells(box), idx = 0;
-    function flip(gi, m) {
-      var g = gs[gi];
+    function flip(gi, m, dur) {
+      var g = gs[gi]; dur = dur || 560;
       g.style.transformBox = 'fill-box'; g.style.transformOrigin = 'center';
-      anim(g, [{ scale: '1 1' }, { scale: '0.04 1', offset: .5 }, { scale: '1 1' }], { duration: 560, easing: 'ease-in-out' });
-      setTimeout(function () { cs.forEach(function (c) { if (c.g !== gi) return; c.p.setAttribute('fill', m ? (m[c.f] || c.f) : c.f); if (c.s && c.s !== 'NONE') c.p.setAttribute('stroke', m ? (m[c.s] || c.s) : c.s); }); }, 280);
+      anim(g, [{ scale: '1 1' }, { scale: '0.04 1', offset: .5 }, { scale: '1 1' }], { duration: dur, easing: 'ease-in-out' });
+      setTimeout(function () { cs.forEach(function (c) { if (c.g !== gi) return; c.p.setAttribute('fill', m ? (m[c.f] || c.f) : c.f); if (c.s && c.s !== 'NONE') c.p.setAttribute('stroke', m ? (m[c.s] || c.s) : c.s); }); }, dur / 2);
     }
+    box._spin = function (gi) { // 누른 동전: 네 색을 휙휙 돌고 제 색으로
+      for (var j = 1; j <= 4; j++) (function (j) { setTimeout(function () { flip(gi, FLOAT_SET[(idx + j) % 4], 240); }, (j - 1) * 230); })(j);
+    };
     function cycle() {
       if (!box.isConnected) return;
-      idx = (idx + 1) % 4; var m = FLOAT_SET[idx];
+      idx = (idx + 1) % 4; var m = FLOAT_SET[idx]; box._fidx = idx;
       gs.forEach(function (g, i) { setTimeout(function () { flip(i, m); }, i * 160); });
       setTimeout(cycle, 3600);
     }
     setTimeout(cycle, 1400);
   }
 
-  function drawCoin(ctx, cx, cy, R, u, face, shade, theta, seed) {
+  function drawCoin(ctx, cx, cy, R, u, face, shade, theta, seed, pal) {
+    if (pal) { var mf = function (w) { return [mixHex(pal.a[0], pal.b[0], w), mixHex(pal.a[1], pal.b[1], w)]; }; var P0 = mf(pal.t); face = P0[0]; shade = P0[1]; }
     var c = Math.cos(theta), sx = Math.abs(c), T = Math.max(1, u * 0.2);
     var rect = function (x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x - w / 2, y - h / 2, w, h); };
     var plus = function (x, y, k, col, th) { th = th || T; rect(x, y, u * k, th, col); rect(x, y, th, u * k, col); };
@@ -308,10 +428,12 @@
       return;
     }
     var rxx = R * sx, shine = 0.55 * Math.sin(theta * 1.3 + seed);
+    var s0 = pal ? -1.7 + 3.4 * pal.t : 0;
     for (i = -n; i <= n; i++) for (j = -n; j <= n; j++) {
       x = cx + j * u; y = cy + i * u;
       var nx = (x - cx) / rxx; ny = (y - cy) / R; var d = Math.hypot(nx, ny);
       if (d > 1) continue;
+      if (pal && pal.t > 0 && pal.t < 1) { var PC = mf(sstep((s0 - (nx + ny) * 0.707) / 0.9 + 0.5)); face = PC[0]; shade = PC[1]; }
       if (d > 0.86) { plus(x, y, 0.9, shade, T * 1.35); continue; } // 테두리
       var band = (nx + ny) * 0.707 - shine;
       if (Math.abs(band) < 0.08 && d < 0.8) { comma(x, y, WHITE); continue; } // 광택 = 흰 쉼표
@@ -336,13 +458,12 @@
     var A = api(), img = scr.querySelector('img[src$="99e387589301a343.svg"],img[src$="5cafc6a2865ad5de.svg"]'); if (!img) return;
     var r = A.rel(img, scr), k = r.w / 104, S = 120 * k;
     var th = 0, t0 = performance.now();
-    sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinIdx(th, 1); } });
+    sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinPal(th, 1).cur; } });
     var cv = canvasAt(scr, r.x + r.w / 2 - S / 2, r.y + r.h / 2 - S / 2, S, S); img.style.visibility = 'hidden';
     (function frame(now) {
       if (!cv.c.isConnected) return;
       th = RM ? 0 : ((now - t0) / 8000) * Math.PI * 2;
-      var C = COIN_SET[coinIdx(th, 1)];
-      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 4.2, C[0], C[1], th, 3); cv.ctx.restore();
+      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 4.2, LIME, L7, th, 3, coinPal(th, 1)); cv.ctx.restore();
       if (!RM) requestAnimationFrame(frame);
     })(t0);
   }
@@ -353,7 +474,7 @@
       .sort(function (a, b) { return A.rel(a, scr).x - A.rel(b, scr).x; });
     var br = A.rel(big, scr), kb = br.w / 199.2, BS = 210 * kb;
     var curAng = 0;
-    sparkles(scr, br.x + br.w / 2, br.y + br.h / 2, 96 * kb, { spread: 1.5, n: 28, u: 8 * kb * 1.1, cur: function () { return coinIdx(curAng, -1); } });
+    sparkles(scr, br.x + br.w / 2, br.y + br.h / 2, 96 * kb, { spread: 1.5, n: 28, u: 8 * kb * 1.1, cur: function () { return coinPal(curAng, -1).cur; } });
     var bc = canvasAt(scr, br.x + br.w / 2 - BS / 2, br.y + br.h / 2 - BS / 2, BS, BS); big.style.visibility = 'hidden';
     bc.c.style.cursor = 'pointer';
     var rc = null, centers = [], kr = 48 / 54;
@@ -384,8 +505,8 @@
       var t = now - t0, pop = RM ? 1 : easeC((t - 300) / 700), x = bc.ctx;
       x.clearRect(0, 0, BS, BS); x.save(); x.scale(kb, kb);
       x.translate(105, 105); x.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop); x.translate(-105, -105);
-      curAng = bigAngle(now); var BCOL = COIN_SET[coinIdx(curAng, -1)];
-      if (pop > 0) drawCoin(x, 105, 105, 96, 8, BCOL[0], BCOL[1], curAng, 3);
+      curAng = bigAngle(now);
+      if (pop > 0) drawCoin(x, 105, 105, 96, 8, LIME, L7, curAng, 3, coinPal(curAng, -1));
       x.restore();
       if (rc) {
         rc.ctx.clearRect(0, 0, rc.w, 62);
@@ -664,7 +785,7 @@
 
     if (!info.back && !info.replace && !isModal && !BOOK_NAV) enter(scr, prev);
     if (!info.back || /^(S-|F-1′|C1-6-4|E0-1)/.test(k)) gfxEnter(scr, k);
-    if (k === 'B-0' || k === 'B2-1') homeCards(scr);
+    if (k === 'B-0' || k === 'B2-1') { homeCards(scr); bookStars(scr); }
     return mode;
   };
 })();
