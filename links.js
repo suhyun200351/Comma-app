@@ -288,3 +288,17 @@
     'B1-5': function () { st().diagnosed = true; }
   };
 })();
+
+/* 숨은 동작(11/3): 화면을 쉬지 않고 20번 연타하면 S-7 「연결이 끊겼어요」 — 굴비 실이 툭 끊겨 떨어짐. 다시 시도 → 원래 화면 */
+(function () {
+  var n = 0, last = 0, NEED = 20, GAP = 700;
+  document.addEventListener('pointerdown', function () {
+    var now = Date.now(), key = window.COMMA && window.COMMA.key;
+    if (!key || key === 'S-7' || /^A-1/.test(key)) { n = 0; return; }
+    n = now - last < GAP ? n + 1 : 1; last = now;
+    if (n >= NEED) {
+      n = 0;
+      setTimeout(function () { if (window.COMMA_API && window.COMMA.key !== 'S-7') window.COMMA_API.go('S-7'); }, 160);
+    }
+  }, true);
+})();

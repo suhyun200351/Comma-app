@@ -137,7 +137,6 @@
       if (kd === 'fish') {
         var top = cells(box).reduce(function (a, c) { return c.y < a.y ? c : a; }, { y: 9, x: .5 });
         inn.style.transformOrigin = (top.x * 100).toFixed(1) + '% 0';
-        anim(inn, [{ rotate: '2.4deg', easing: SINE }, { rotate: '-2.4deg', easing: SINE }, { rotate: '2.4deg' }], { duration: 3200, delay: 1700, iterations: Infinity });
       }
       if (kd === 'float3') {
         split3(box).forEach(function (g, i) { bob(g, [4, 5, 3.5][i], [3000, 3700, 4300][i], i * 400); }); floatColors(box);
@@ -159,6 +158,46 @@
   }
   window.COMMA_GFX = gfxInit;
 
+  /* S-7 연결 끊김: 굴비가 흔들리며 들어오다 실이 팽팽해지고 툭 끊겨 떨어짐 (11/3) */
+  function fishCut(box, inn) {
+    var svg = inn.querySelector('svg'); if (!svg) return;
+    var NS = 'http://www.w3.org/2000/svg', CUT = 150, SX = 72.4;   // 실 끊기는 높이(피그마 좌표 0~271)
+    var gUp = svg.querySelector('g.fup'), gDn = svg.querySelector('g.fdn');
+    if (!gUp) {
+      gUp = document.createElementNS(NS, 'g'); gUp.setAttribute('class', 'fup');
+      gDn = document.createElementNS(NS, 'g'); gDn.setAttribute('class', 'fdn');
+      [].slice.call(svg.querySelectorAll('path')).forEach(function (p) {
+        var b; try { b = p.getBBox(); } catch (e) { b = { y: 999, height: 0 }; }
+        var up = (p.getAttribute('fill') || '').toUpperCase() === '#A9A8A3' && b.y + b.height / 2 < CUT;
+        (up ? gUp : gDn).appendChild(p);
+      });
+      svg.appendChild(gDn); svg.appendChild(gUp);
+      [gUp, gDn].forEach(function (g) { g.style.transformBox = 'view-box'; });
+      gUp.style.transformOrigin = SX + 'px 0px'; gDn.style.transformOrigin = SX + 'px 238px';
+    }
+    gDn.getAnimations().forEach(function (a) { a.cancel(); });
+    var D = 1700, T = 560;   // 끊기는 순간 (등장 흔들림 도중)
+    // 전체: 흔들리며 등장 → 끊긴 뒤 윗실만 남아 잦아듦
+    anim(inn, [{ rotate: '15deg', easing: 'ease-out' }, { rotate: '-9deg', offset: .3, easing: 'ease-in-out' }, { rotate: '5deg', offset: .5, easing: 'ease-in-out' }, { rotate: '-2.5deg', offset: .7, easing: 'ease-in-out' }, { rotate: '1deg', offset: .86, easing: 'ease-in-out' }, { rotate: '0deg' }], { duration: D });
+    // 윗실: 팽팽하게 늘어났다가 툭 → 위로 튕겨 올라가 출렁
+    var q = T / D;
+    anim(gUp, [{ transform: 'scaleY(1)', easing: 'ease-in' }, { transform: 'scaleY(1.03)', offset: q - .02, easing: 'ease-out' }, { transform: 'scaleY(.7)', offset: q + .07, easing: 'ease-in-out' },
+      { transform: 'scaleY(.86)', offset: q + .2, easing: 'ease-in-out' }, { transform: 'scaleY(.78)', offset: q + .33, easing: 'ease-in-out' }, { transform: 'scaleY(.81)' }], { duration: D, fill: 'forwards' });
+    // 굴비: 파르르 떨며 당겨짐 → 끊기는 순간 살짝 튀어 오른 뒤 기울며 뚝 떨어짐
+    anim(gDn, [{ transform: 'translate(0px,0px) rotate(0deg)' }, { transform: 'translate(0px,2px) rotate(0deg)', offset: q * .55 }, { transform: 'translate(1.2px,4px) rotate(1deg)', offset: q * .7 },
+      { transform: 'translate(-1.2px,3px) rotate(-1deg)', offset: q * .8 }, { transform: 'translate(1px,5px) rotate(1deg)', offset: q * .9 }, { transform: 'translate(0px,6px) rotate(0deg)', offset: q, easing: 'cubic-bezier(.2,.7,.4,1)' },
+      { transform: 'translate(-3px,-10px) rotate(-7deg)', offset: q + .07, easing: 'cubic-bezier(.55,0,1,.6)' }, { transform: 'translate(-22px,640px) rotate(-42deg)' }], { duration: D, fill: 'forwards' });
+    anim(gDn, [{ opacity: 1 }, { opacity: 0 }], { duration: 520, delay: T + 260, easing: 'ease-in', fill: 'forwards' });
+    // 끊긴 자리: 실 부스러기 몇 개
+    for (var i = 0; i < 5; i++) {
+      var bit = document.createElementNS(NS, 'rect');
+      bit.setAttribute('x', SX - .7); bit.setAttribute('y', CUT - 2); bit.setAttribute('width', 1.4); bit.setAttribute('height', 3.6); bit.setAttribute('fill', i % 2 ? '#A9A8A3' : '#D3FF31');
+      bit.style.transformBox = 'fill-box'; bit.style.transformOrigin = 'center'; svg.appendChild(bit);
+      var a = (i / 5) * Math.PI * 2 + Math.random(), d = 10 + Math.random() * 10;
+      (function (b) { var an = anim(b, [{ opacity: 0, transform: 'translate(0,0) rotate(0deg)' }, { opacity: 1, transform: 'translate(0,0) rotate(0deg)', offset: .01 }, { opacity: 0, transform: 'translate(' + (Math.cos(a) * d).toFixed(1) + 'px,' + (Math.sin(a) * d + 6).toFixed(1) + 'px) rotate(' + (200 * (Math.random() - .5)).toFixed(0) + 'deg)' }], { duration: 520, delay: T, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'both' }); if (an) an.finished.then(function () { b.remove(); }, function () {}); })(bit);
+    }
+  }
+
   /* 처음 나타날 때 한 번 */
   function gfxEnter(root, k) {
     if (RM) return;
@@ -173,10 +212,7 @@
         if (ERROR_SCREENS.test(k)) setTimeout(function () { shake(inn, 7); }, 1050);
       }
       if (kd === 'glass') ripple(box, { order: function (c) { return Math.min(1, Math.hypot(c.x - .4, c.y - .4) / .7); }, span: 480 });
-      if (kd === 'fish') {
-        anim(inn, [{ rotate: '16deg', easing: 'ease-out' }, { rotate: '-10deg', offset: .3, easing: 'ease-in-out' }, { rotate: '6deg', offset: .55, easing: 'ease-in-out' }, { rotate: '-3deg', offset: .78, easing: 'ease-in-out' }, { rotate: '2.4deg' }], { duration: 1700 });
-        ripple(box, { only: function (c) { return c.y > .55; }, order: function (c) { return Math.abs(c.x - .5) * 2; }, span: 380, delay: 150 });
-      }
+      if (kd === 'fish') fishCut(box, inn);
       if (kd === 'boxes') ripple(box, { order: function (c) { return 1 - c.y; }, span: 620, dur: 420, easing: POP, jitter: 40,
         frames: [{ opacity: 0, transform: 'translateY(-18px)' }, { opacity: 1, transform: 'none' }] });
       if (kd === 'float3') split3(box).forEach(function (g, i) {
@@ -489,19 +525,30 @@
   }
   // 홈 위쪽 라임 동전: 8초에 한 바퀴 천천히
   function homeCoin(scr) {
-    // 11/3: 마이 프로필 동전과 같은 그림(굵은 부호 칸 · seed 2)과 같은 움직임(7초에 한 바퀴 · 누르면 두 바퀴 휙 + 부호 톡)
+    // 11/3: 온보딩(A-1) 동전과 같은 그림(촘촘한 부호 칸 · seed 3)과 같은 움직임 — 커지며 세 바퀴 → 라임 앞면에서 ±30° 흔들림 → 5초마다 두 바퀴 휙 · 누르면 휙
     var A = api(), img = scr.querySelector('img[src$="99e387589301a343.svg"],img[src$="5cafc6a2865ad5de.svg"]'); if (!img) return;
-    var r = A.rel(img, scr), k = r.w / 104, S = 120 * k;
-    var th = 0, t0 = performance.now(), boost = null;
-    var sp = sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinPal(th, 1).cur; } });
+    var r = A.rel(img, scr), k = r.w / 104, S = 120 * k, ang = 0;
+    var sp = sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinPal(ang, -1).cur; } });
     var cv = canvasAt(scr, r.x + r.w / 2 - S / 2, r.y + r.h / 2 - S / 2, S, S); img.style.visibility = 'hidden';
     cv.c.style.cursor = 'pointer';
-    cv.c.addEventListener('pointerdown', function () { if (RM) return; if (boost === null) boost = performance.now(); if (sp && sp.burst) sp.burst(18); });
+    var t0 = performance.now(), spin0 = null, wob0 = t0 + 4400, nextAuto = t0 + 4400 + 5200;
+    function angle(now) {
+      if (RM) return 0;
+      if (spin0 !== null) { var q = (now - spin0) / 2400; if (q < 1) return Math.PI * 4 * (1 - easeC(q)); spin0 = null; wob0 = now; nextAuto = now + 5200; }
+      var t = now - t0;
+      if (t < 4400) return Math.PI * 6 * (1 - easeC((t - 400) / 4000));
+      if (now > nextAuto) { spin0 = now; return Math.PI * 4; }
+      return (30 * Math.PI / 180) * Math.sin((now - wob0) / 4000 * Math.PI * 2);
+    }
+    cv.c.addEventListener('click', function (e) { e.stopPropagation(); var n = performance.now(); if (!RM && spin0 === null && n - t0 > 4400) { spin0 = n; if (sp && sp.burst) sp.burst(18); } });
     (function frame(now) {
       if (!cv.c.isConnected) return;
-      th = RM ? 0 : ((now - t0) / 7000) * Math.PI * 2;
-      if (boost !== null) { var bq = (now - boost) / 1100; if (bq < 1) th += Math.PI * 4 * (1 - Math.pow(1 - bq, 3)); else { t0 -= 7000 * 2; boost = null; th = ((now - t0) / 7000) * Math.PI * 2; } }
-      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 7.8, LIME, L7, th, 2, coinPal(th, 1)); cv.ctx.restore();
+      var pop = RM ? 1 : easeC((now - t0 - 200) / 700), x = cv.ctx;
+      ang = angle(now);
+      x.clearRect(0, 0, S, S); x.save(); x.scale(k, k);
+      x.translate(60, 60); x.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop); x.translate(-60, -60);
+      if (pop > 0) drawCoin(x, 60, 60, 52, 52 * 8 / 96, LIME, L7, ang, 3, coinPal(ang, -1));
+      x.restore();
       if (!RM) requestAnimationFrame(frame);
     })(t0);
   }
