@@ -56,7 +56,7 @@
     var svg = box.querySelector('svg'), vb = svg.viewBox.baseVal, W = vb.width || 100, H = vb.height || 100;
     box._cells = [].map.call(svg.querySelectorAll('path'), function (p) {
       var b; try { b = p.getBBox(); } catch (e) { b = { x: 0, y: 0, width: 0, height: 0 }; }
-      return { p: p, x: (b.x + b.width / 2) / W, y: (b.y + b.height / 2) / H, f: (p.getAttribute('fill') || '').toUpperCase() };
+      return { p: p, x: (b.x + b.width / 2) / W, y: (b.y + b.height / 2) / H, f: (p.getAttribute('fill') || '').toUpperCase(), s: (p.getAttribute('stroke') || '').toUpperCase() };
     });
     return box._cells;
   }
@@ -120,7 +120,7 @@
         inn.style.transformOrigin = (top.x * 100).toFixed(1) + '% 0';
         anim(inn, [{ rotate: '2.4deg', easing: SINE }, { rotate: '-2.4deg', easing: SINE }, { rotate: '2.4deg' }], { duration: 3200, delay: 1700, iterations: Infinity });
       }
-      if (kd === 'float3') split3(box).forEach(function (g, i) { bob(g, [4, 5, 3.5][i], [3000, 3700, 4300][i], i * 400); });
+      if (kd === 'float3') { split3(box).forEach(function (g, i) { bob(g, [4, 5, 3.5][i], [3000, 3700, 4300][i], i * 400); }); floatColors(box); }
     });
   }
   window.COMMA_GFX = gfxInit;
@@ -195,6 +195,94 @@
   /* ---------- 부호 동전 (수현 「콤마 홈 동전」 · 「콤마 동전 길」 프로토타입 그대로)
      칸마다 부호 하나: 테두리 + 굵게 · 그늘 % · 몸통 + · 밝은 면 − · 광택 , (흰 쉼표) ---------- */
   var LIME = '#D3FF31', L7 = '#8EB500', WHITE = '#F7F7F5', GR = '#71706C', GR7 = '#4C4C49';
+
+  /* ---------- 서브컬러 동전 (수현 피그마 「디자인 최종」 Section 1 · 2 색 그대로) ----------
+     A = 돌 때마다(옆면을 지날 때) 색이 바뀜 : 라임 → 코랄 → 라벤더 → 시안
+     B = 동전 뒤에서 서브색 부호가 별처럼 자글자글 : 시안 + · 라벤더 % · 코랄 − (라임은 ,)
+     주소 끝에 ?coin=a / ?coin=b / ?coin=ab(기본) / ?coin=off 로 바꿔 볼 수 있음 (한 번 고르면 기억) */
+  var COIN_SET = [[LIME, L7], ['#EFA6A3', '#FF8B87'], ['#C8C5FB', '#948DFF'], ['#7DF7FD', '#00C5CE']]; // Section 2: 면 · 그늘
+  var FLOAT_SET = [null, { '#8EB500': '#C8C5FB', '#D3FF31': '#948DFF', '#E6FF8A': '#948DFF' },   // Section 1: 라임(원본) → 라벤더
+    { '#8EB500': '#EFA6A3', '#D3FF31': '#FF8B87', '#E6FF8A': '#FF8B87' },                         // → 코랄
+    { '#8EB500': '#7DF7FD', '#D3FF31': '#51F7FF', '#E6FF8A': '#51F7FF' }];                        // → 시안
+  var COINFX = (function () {
+    var m = (location.search.match(/[?&]coin=(ab|a|b|off)\b/) || [])[1];
+    try { if (m) localStorage.setItem('commaCoinFx', m); else m = localStorage.getItem('commaCoinFx'); } catch (e) {}
+    return m || 'ab';
+  })();
+  var FX_COLOR = !RM && /a/.test(COINFX), FX_SPARK = !RM && /b/.test(COINFX);
+  // 옆면을 몇 번 지났나 → 색 번호 (dir -1 = 남은 각도로 계산해서 멈출 때 라임)
+  function coinIdx(theta, dir) {
+    if (!FX_COLOR) return 0;
+    var n = Math.floor((Math.abs(theta) + Math.PI / 2) / Math.PI);
+    return dir < 0 ? (4 - n % 4) % 4 : n % 4;
+  }
+  var SPK = [{ s: '+', c: COIN_SET[3] }, { s: '%', c: COIN_SET[2] }, { s: '-', c: COIN_SET[1] }, { s: ',', c: COIN_SET[0] }];
+  var SPK_OF = [3, 2, 1, 0]; // 동전 색 번호 → 그 색의 부호
+  function sym(ctx, kind, x, y, u, col) {
+    var T = Math.max(1, u * 0.22), r = function (a, b, w, h) { ctx.fillRect(a - w / 2, b - h / 2, w, h); };
+    ctx.fillStyle = col; ctx.strokeStyle = col;
+    if (kind === '+') { r(x, y, u, T); r(x, y, T, u); }
+    else if (kind === '-') r(x, y, u * 0.9, T);
+    else if (kind === '%') {
+      ctx.beginPath(); ctx.arc(x - u * .26, y - u * .26, u * .16, 0, 6.2832); ctx.arc(x + u * .26, y + u * .26, u * .16, 0, 6.2832); ctx.fill();
+      ctx.lineWidth = T * .8; ctx.beginPath(); ctx.moveTo(x + u * .4, y - u * .44); ctx.lineTo(x - u * .4, y + u * .44); ctx.stroke();
+    } else { var a = u * 0.42; r(x, y - u * .14, a, a); ctx.beginPath(); ctx.moveTo(x, y + u * .07); ctx.lineTo(x + a / 2, y + u * .07); ctx.lineTo(x - a / 2, y + u * .44); ctx.closePath(); ctx.fill(); }
+  }
+  // 동전 뒤 반짝이: 동전 둘레에서 부호가 작게 켜졌다 꺼짐
+  function sparkles(scr, cx, cy, R, o) {
+    if (!FX_SPARK) return null;
+    o = o || {};
+    var SW = 393, spread = o.spread || 1.7, half = R * spread;
+    var x0 = Math.max(0, cx - half), x1 = Math.min(SW, cx + half), y0 = cy - half, w = x1 - x0, h = half * 2;
+    var cv = canvasAt(scr, x0, y0, w, h); cv.c.style.zIndex = o.z || 1; cv.c.style.pointerEvents = 'none';
+    var N = o.n || 16, ps = [], U = o.u || Math.max(4, R * 0.09);
+    function spawn(p, now, first) {
+      var a = Math.random() * Math.PI * 2, d = R * (1.04 + Math.pow(Math.random(), 1.4) * (spread - 1.1));
+      var cur = o.cur ? o.cur() : -1, k;
+      if (cur >= 0 && Math.random() < .55) k = SPK_OF[cur];
+      else k = Math.random() < (cur >= 0 ? .25 : .12) ? 3 : Math.floor(Math.random() * 3);
+      p.x = cx + Math.cos(a) * d - x0; p.y = cy + Math.sin(a) * d - y0;
+      p.k = k; p.col = SPK[k].c[Math.random() < .5 ? 0 : 1];
+      p.size = U * (0.7 + Math.random() * 0.9); p.life = 700 + Math.random() * 1100;
+      p.t0 = now + (first ? Math.random() * 1600 : Math.random() * 500);
+      p.blink = Math.random() < .35; return p;
+    }
+    var t = performance.now();
+    for (var i = 0; i < N; i++) ps.push(spawn({}, t, true));
+    (function frame(now) {
+      if (!cv.c.isConnected) return;
+      var x = cv.ctx; x.clearRect(0, 0, w, h);
+      ps.forEach(function (p) {
+        var q = (now - p.t0) / p.life; if (q < 0) return;
+        if (q >= 1) { spawn(p, now); return; }
+        var al = Math.pow(Math.sin(Math.PI * q), 2);
+        if (p.blink && Math.floor(q * 10) % 3 === 1) al *= .35; // 자글자글 깜빡
+        x.globalAlpha = al; sym(x, SPK[p.k].s, p.x, p.y, p.size * (0.6 + 0.4 * Math.sin(Math.PI * q)), p.col);
+      });
+      x.globalAlpha = 1;
+      requestAnimationFrame(frame);
+    })(t);
+    return cv;
+  }
+  // 떠 있는 동전 셋(C0-1): 하나씩 휙 돌며 색이 바뀜 (라임 → 라벤더 → 코랄 → 시안)
+  function floatColors(box) {
+    if (!FX_COLOR || box._fc) return; box._fc = 1;
+    var gs = split3(box), cs = cells(box), idx = 0;
+    function flip(gi, m) {
+      var g = gs[gi];
+      g.style.transformBox = 'fill-box'; g.style.transformOrigin = 'center';
+      anim(g, [{ scale: '1 1' }, { scale: '0.04 1', offset: .5 }, { scale: '1 1' }], { duration: 560, easing: 'ease-in-out' });
+      setTimeout(function () { cs.forEach(function (c) { if (c.g !== gi) return; c.p.setAttribute('fill', m ? (m[c.f] || c.f) : c.f); if (c.s && c.s !== 'NONE') c.p.setAttribute('stroke', m ? (m[c.s] || c.s) : c.s); }); }, 280);
+    }
+    function cycle() {
+      if (!box.isConnected) return;
+      idx = (idx + 1) % 4; var m = FLOAT_SET[idx];
+      gs.forEach(function (g, i) { setTimeout(function () { flip(i, m); }, i * 160); });
+      setTimeout(cycle, 3600);
+    }
+    setTimeout(cycle, 1400);
+  }
+
   function drawCoin(ctx, cx, cy, R, u, face, shade, theta, seed) {
     var c = Math.cos(theta), sx = Math.abs(c), T = Math.max(1, u * 0.2);
     var rect = function (x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(x - w / 2, y - h / 2, w, h); };
@@ -247,12 +335,14 @@
   function homeCoin(scr) {
     var A = api(), img = scr.querySelector('img[src$="99e387589301a343.svg"],img[src$="5cafc6a2865ad5de.svg"]'); if (!img) return;
     var r = A.rel(img, scr), k = r.w / 104, S = 120 * k;
+    var th = 0, t0 = performance.now();
+    sparkles(scr, r.x + r.w / 2, r.y + r.h / 2, 52 * k, { spread: 1.65, n: 20, u: 4.2 * k * 1.5, cur: function () { return coinIdx(th, 1); } });
     var cv = canvasAt(scr, r.x + r.w / 2 - S / 2, r.y + r.h / 2 - S / 2, S, S); img.style.visibility = 'hidden';
-    var t0 = performance.now();
     (function frame(now) {
       if (!cv.c.isConnected) return;
-      var th = RM ? 0 : ((now - t0) / 8000) * Math.PI * 2;
-      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 4.2, LIME, L7, th, 3); cv.ctx.restore();
+      th = RM ? 0 : ((now - t0) / 8000) * Math.PI * 2;
+      var C = COIN_SET[coinIdx(th, 1)];
+      cv.ctx.clearRect(0, 0, S, S); cv.ctx.save(); cv.ctx.scale(k, k); drawCoin(cv.ctx, 60, 60, 52, 4.2, C[0], C[1], th, 3); cv.ctx.restore();
       if (!RM) requestAnimationFrame(frame);
     })(t0);
   }
@@ -262,6 +352,8 @@
     var steps = [].filter.call(scr.querySelectorAll('img'), function (i) { var r = A.rel(i, scr); return Math.abs(r.w - 48) < 2 && r.y > 480 && r.y < 640; })
       .sort(function (a, b) { return A.rel(a, scr).x - A.rel(b, scr).x; });
     var br = A.rel(big, scr), kb = br.w / 199.2, BS = 210 * kb;
+    var curAng = 0;
+    sparkles(scr, br.x + br.w / 2, br.y + br.h / 2, 96 * kb, { spread: 1.5, n: 28, u: 8 * kb * 1.1, cur: function () { return coinIdx(curAng, -1); } });
     var bc = canvasAt(scr, br.x + br.w / 2 - BS / 2, br.y + br.h / 2 - BS / 2, BS, BS); big.style.visibility = 'hidden';
     bc.c.style.cursor = 'pointer';
     var rc = null, centers = [], kr = 48 / 54;
@@ -292,7 +384,8 @@
       var t = now - t0, pop = RM ? 1 : easeC((t - 300) / 700), x = bc.ctx;
       x.clearRect(0, 0, BS, BS); x.save(); x.scale(kb, kb);
       x.translate(105, 105); x.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop); x.translate(-105, -105);
-      if (pop > 0) drawCoin(x, 105, 105, 96, 8, LIME, L7, bigAngle(now), 3);
+      curAng = bigAngle(now); var BCOL = COIN_SET[coinIdx(curAng, -1)];
+      if (pop > 0) drawCoin(x, 105, 105, 96, 8, BCOL[0], BCOL[1], curAng, 3);
       x.restore();
       if (rc) {
         rc.ctx.clearRect(0, 0, rc.w, 62);
