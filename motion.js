@@ -127,6 +127,7 @@
       var h = hashOf(img); if (!KIND[h]) return;
       var box = inline(img); if (!box || RM) return;
       var kd = box.dataset.gfx, inn = box.querySelector('.gfxin');
+      if (kd === 'logo' && COINFX !== 'off' && heroCoin(box)) return; // 온보딩: 결과 화면과 같은 부호 동전 (도는 동안 서브색 · 반짝이)
       if (/^(logo|bang)$/.test(kd)) sheen(box, kd === 'bang' ? 9000 : 8000);
       if (kd === 'logo') coinSpin(box);
       if (kd === 'bang' && !ERROR_SCREENS.test(k)) bob(inn, 5, 3400, 1100);
@@ -163,7 +164,7 @@
     if (RM) return;
     [].forEach.call(root.querySelectorAll('.gfxbox'), function (box) {
       var kd = box.dataset.gfx, inn = box.querySelector('.gfxin');
-      if (kd === 'logo') ripple(box, { span: 760 });
+      if (kd === 'logo' && !box._hero) ripple(box, { span: 760 });
       if (kd === 'bang') {
         var R = function (c) { return Math.min(1, Math.hypot(c.x - .5, c.y - .5) / .5); };
         ripple(box, { order: R, span: 460, only: function (c) { return c.f !== '#F7F7F5'; } });
@@ -380,6 +381,39 @@
     imgs.forEach(function (i) { var r = A.rel(i, scr); x0 = Math.min(x0, r.x); y0 = Math.min(y0, r.y); x1 = Math.max(x1, r.x + r.w); y1 = Math.max(y1, r.y + r.h); });
     x0 = Math.max(0, x0 - 24); x1 = Math.min(393, x1 + 24); y0 -= 40; y1 += 40;
     starField(common, x0 - cr.x, y0 - cr.y, x1 - x0, y1 - y0, { u: 4 });
+  }
+  // 온보딩(A-1) 큰 동전: B1-5 결과 동전과 같은 그래픽 · 모션
+  // 커지며 세 바퀴(색이 그라데이션으로 바뀜) → 라임 앞면에서 멈춰 ±30° 흔들림 → 5초마다 두 바퀴 휙 · 누르면 바로 휙
+  function heroCoin(box) {
+    if (RM || box._hero) return !!box._hero;
+    var scr = screenOf(box); if (!scr || !scr.querySelector('.content')) return false;
+    var A = api(), r = A.rel(box, scr); if (!r.w) return false;
+    box._hero = 1;
+    var kb = r.w / 199.2, BS = 210 * kb, cx = r.x + r.w / 2, cy = r.y + r.h / 2, ang = 0;
+    sparkles(scr, cx, cy, 96 * kb, { spread: 1.5, n: 28, u: 8 * kb * 1.1, z: 2, cur: function () { return coinPal(ang, -1).cur; } });
+    var cv = canvasAt(scr, cx - BS / 2, cy - BS / 2, BS, BS); cv.c.style.zIndex = 3; cv.c.style.cursor = 'pointer';
+    box.style.visibility = 'hidden';
+    var t0 = performance.now(), spin0 = null, wob0 = t0 + 4400, nextAuto = t0 + 4400 + 5200;
+    function angle(now) {
+      if (spin0 !== null) { var q = (now - spin0) / 2400; if (q < 1) return Math.PI * 4 * (1 - easeC(q)); spin0 = null; wob0 = now; nextAuto = now + 5200; }
+      var t = now - t0;
+      if (t < 4400) return Math.PI * 6 * (1 - easeC((t - 400) / 4000));
+      if (now > nextAuto) { spin0 = now; return Math.PI * 4; }
+      return (30 * Math.PI / 180) * Math.sin((now - wob0) / 4000 * Math.PI * 2);
+    }
+    cv.c.addEventListener('click', function (e) { e.stopPropagation(); if (spin0 === null && now0() - t0 > 4400) spin0 = now0(); });
+    function now0() { return performance.now(); }
+    (function frame(now) {
+      if (!cv.c.isConnected) return;
+      var t = now - t0, pop = easeC((t - 200) / 700), x = cv.ctx;
+      ang = angle(now);
+      x.clearRect(0, 0, BS, BS); x.save(); x.scale(kb, kb);
+      x.translate(105, 105); x.scale(0.6 + 0.4 * pop, 0.6 + 0.4 * pop); x.translate(-105, -105);
+      if (pop > 0) drawCoin(x, 105, 105, 96, 8, LIME, L7, ang, 3, coinPal(ang, -1));
+      x.restore();
+      requestAnimationFrame(frame);
+    })(t0);
+    return true;
   }
   function floatColors(box) {
     if (!FX_COLOR || box._fc) return; box._fc = 1;
