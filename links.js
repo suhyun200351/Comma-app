@@ -42,8 +42,8 @@
   // 비교하기 (0): 보관함에 담은 게 없으면 넘어가지 않고 알려 줌
   var compareGo = function (api, scr) {
     var D = window.COMMA_DATA, n = Object.keys(D.compare).filter(function (x) { return D.compare[x]; }).length;
-    if (n) return 'D1-4';
-    window.COMMA_TOAST('보관함에 담은 적금이 없어서 비교할 수 없어요');
+    if (n >= 2) return 'D1-4';
+    window.COMMA_TOAST(n === 1 ? '1개만 담겨 있어서 비교할 수 없어요' : '보관함에 담은 적금이 없어서 비교할 수 없어요');
     var t = api.findText(scr, /^비교하기/); if (t && window.COMMA_SHAKE) window.COMMA_SHAKE(api.pick(t, scr), 5);
   };
   var savePlan = function (api) {
@@ -117,7 +117,12 @@
     'D1-2': [[/^완료$/, 'BACK']],
     'D1-3': [[/^비교하기/, compareGo], [/^청년미래적금$/, pickD('청년미래적금'), {maxH: 120}]],
     'D1-4': [[/^보관함$/, 'D1-3', {idx: 0}], [/^계획 세우기$/, function () { var D = window.COMMA_DATA; if (window.COMMA_STATUS(D.pick) !== 'no') D.pickSel = D.pick; D.c1Visited = true; return 'C1-5-1'; }]],
-    'D2-1': [[/약관 원문을 보고 싶어요/, 'D2-2'], [/^계획 세우기$/, function () { var D = window.COMMA_DATA; if (window.COMMA_STATUS(D.pick) !== 'no') D.pickSel = D.pick; D.c1Visited = true; return 'C1-5-1'; }], [/^보관함에 담/, function () { var D = window.COMMA_DATA; D.boxed[D.pick] = true; D.compare[D.pick] = true; window.COMMA_TOAST('보관함에 담았어요'); return 'D1-3'; }]],
+    'D2-1': [[/약관 원문을 보고 싶어요/, 'D2-2'], [/^계획 세우기$/, function () { var D = window.COMMA_DATA; if (window.COMMA_STATUS(D.pick) !== 'no') D.pickSel = D.pick; D.c1Visited = true; return 'C1-5-1'; }], [/^보관함에 담/, function (api, scr) {
+      var D = window.COMMA_DATA, was = !!D.boxed[D.pick]; D.boxed[D.pick] = true; D.compare[D.pick] = true;
+      if (was || !window.COMMA_CHEER) { if (!was) window.COMMA_TOAST('보관함에 담았어요'); return 'D1-3'; }
+      var t = api.findText(scr, /^보관함에 담/); if (t) window.COMMA_CHEER(api.pick(t, scr), { n: 18 });
+      window.COMMA_TOAST('보관함에 담았어요'); setTimeout(function () { api.go('D1-3'); }, 620);
+    }]],
     // ---- E ----
     'E0-1': [[/^간편 로그인$/, toLogin('E0-2')], [/^설정$/, 'E5-1', {maxH: 56}], [/^서비스 소개$/, 'E5-4', {maxH: 56}]],
     'E0-2': [[/^내 정보$/, function () { if (infoIn()) return 'E0-3'; window.COMMA_TOAST('아직 저장한 내 정보가 없어요'); return plan(); }, {maxH: 56}], [/^저장한 계획$/, function () { st().e1x = false; return st().savedPlan ? 'E1-1' : 'S-5'; }, {maxH: 56}], [/^내 질문 및 답변$/, 'E3-1', {maxH: 56}], [/^설정$/, 'E5-1', {maxH: 56}], [/^서비스 소개$/, 'E5-4', {maxH: 56}], [/^로그아웃$/, 'E5-2', {maxH: 56}]],

@@ -564,6 +564,7 @@
       btn.addEventListener('click', function (e) {
         e.stopPropagation(); D.boxed[r.name] = true; if (!c1) D.compare[r.name] = true;
         render(); cb.animate([{ transform: 'scale(.5)', opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 260, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        if (window.COMMA_CHEER) window.COMMA_CHEER(cb, { n: 14, ringScale: '1.8' });
         toast('보관함에 담았어요'); counts(scr, k, api);
       });
       cb.classList.add('hot'); cb.style.pointerEvents = 'auto';
@@ -593,13 +594,24 @@
     if (k === 'C1-5') filterRows(scr, rows, function (r) { return !!D.boxed[r.name]; }, api);
     counts(scr, k, api); refreshNext(scr, k);
   }
+  // 비교하기: 2개 이상 담겨야 라임으로 켜짐, 그 전엔 회색(보관함 버튼과 같은 색)
+  function compareLook(t, on) {
+    var b = t.parentElement, sp = t.querySelector('span'); if (!b || !sp) return;
+    if (!b.dataset.cmpOrig) b.dataset.cmpOrig = JSON.stringify({ sh: b.style.boxShadow, col: sp.style.color });
+    var o = JSON.parse(b.dataset.cmpOrig), was = b.dataset.cmpOn;
+    b.style.boxShadow = on ? o.sh : 'inset 0 0 0 0.8px rgb(158,158,153)';
+    [].forEach.call(t.querySelectorAll('span'), function (x) { x.style.color = on ? o.col : 'rgb(158,158,153)'; });
+    [].forEach.call(b.querySelectorAll('img'), function (im) { im.style.filter = on ? '' : 'grayscale(1) brightness(.72)'; });
+    b.dataset.cmpOn = on ? '1' : '0';
+    if (on && was === '0' && window.COMMA_CHEER) window.COMMA_CHEER(b, { n: 12 }); // 막 켜졌을 때 반짝
+  }
   function counts(scr, k, api) {
     var nb = Object.keys(D.boxed).length, nc = Object.keys(D.compare).filter(function (x) { return D.compare[x]; }).length;
     [].forEach.call(scr.querySelectorAll('.t'), function (t) {
       if (t.closest('.under') || t.closest('[data-pslot]')) return;
       var s2 = textOf(t);
       if (/^보관함( \(\d+\))?$/.test(s2) && api.rel(t, scr).y > 700) setText(t, nb ? '보관함 (' + nb + ')' : '보관함');
-      if (/^비교하기 \(\d+\)$/.test(s2)) setText(t, '비교하기 (' + nc + ')');
+      if (/^비교하기 \(\d+\)$/.test(s2)) { setText(t, '비교하기 (' + nc + ')'); compareLook(t, nc >= 2); }
     });
   }
   // 줄 숨기기 + 아래 줄 끌어올리기
@@ -1033,10 +1045,11 @@
       var o = JSON.parse(el.dataset.orig);
       D.likes[key] = !D.likes[key]; setText(t, '공감 ' + (n + (D.likes[key] ? 1 : -1)));
       el.style.background = o.bg; el.style.boxShadow = D.likes[key] ? 'inset 0 0 0 0.8px rgb(211,255,49)' : o.sh; t.querySelector('span').style.color = D.likes[key] ? 'rgb(211,255,49)' : o.col;
-      el.animate([{ transform: 'scale(.9)' }, { transform: 'none' }], { duration: 200 });
+      if (D.likes[key] && window.COMMA_CHEER) window.COMMA_CHEER(el, { flash: '#EFA6A3', n: 14 }); // 공감할 때만 (취소할 땐 조용히)
+      else el.animate([{ transform: 'scale(.9)' }, { transform: 'none' }], { duration: 200 });
     }, 40);
     if (k === 'E0-3') { hotText(scr, api, /^수정$/, function () { api.go('E0-4'); }, 40); hotText(scr, api, /^삭제$/, function (el) { toast('직접 입력한 정보는 지울 수 없어요'); if (window.COMMA_SHAKE) window.COMMA_SHAKE(el, 4); }, 40); }
-    if (k === 'D1-1' || k === 'D1-2') hotText(scr, api, /^보관함에 담기$/, function (el, t) { D.boxed = true; window.COMMA.boxed = true; setText(t, '담았어요'); toast('보관함에 담았어요'); }, 40);
+    if (k === 'D1-1' || k === 'D1-2') hotText(scr, api, /^보관함에 담기$/, function (el, t) { D.boxed = true; window.COMMA.boxed = true; setText(t, '담았어요'); toast('보관함에 담았어요'); if (window.COMMA_CHEER) window.COMMA_CHEER(el); }, 40);
     // B1-5: 「…부터 보기 →」 버튼을 라임으로 채움
     if (k === 'B1-5') [].forEach.call(scr.querySelectorAll('.t'), function (t) {
       if (!/부터 보기$/.test(textOf(t))) return;

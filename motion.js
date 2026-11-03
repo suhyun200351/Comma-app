@@ -766,6 +766,54 @@
     anim(edge, [{ opacity: 0 }, { opacity: 0, offset: .19 }, { opacity: 1, offset: .25 }, { opacity: 0, offset: .31 }, { opacity: 0, offset: .69 }, { opacity: 1, offset: .75 }, { opacity: 0, offset: .81 }, { opacity: 0 }], { duration: 8000, iterations: Infinity });
   }
 
+  /* ---------- 담기 · 공감 축하 (유튜브 구독 누를 때처럼): 버튼이 눌렸다 튀고, 서브색 부호가 사방으로 톡
+     켤 때만 부름 — 빼거나 취소할 땐 부르지 않음 ---------- */
+  window.COMMA_CHEER = function (el, o) {
+    if (!el || RM) return; o = o || {};
+    var scr = screenOf(el); if (!scr) return;
+    var sb = scr.getBoundingClientRect(), k = sb.width / 393, eb = el.getBoundingClientRect();
+    var ex = (eb.left - sb.left) / k, ey = (eb.top - sb.top) / k, ew = eb.width / k, eh = eb.height / k;
+    // 1) 버튼: 꾹 눌렸다가 통 튐
+    anim(el, [{ scale: '1' }, { scale: '.84', offset: .25 }, { scale: '1.12', offset: .6 }, { scale: '1' }], { duration: 460, easing: 'ease-out' });
+    // 2) 번쩍: 버튼 위에 서브색 면이 잠깐 떴다 사라짐 (공감 버튼처럼 바탕이 비어 있을 때)
+    if (o.flash) {
+      var fl = div('left:' + ex + 'px;top:' + ey + 'px;width:' + ew + 'px;height:' + eh + 'px;z-index:29;pointer-events:none;background:' + (o.flash === true ? '#EFA6A3' : o.flash) + ';mix-blend-mode:screen');
+      scr.appendChild(fl);
+      var fa = anim(fl, [{ opacity: 0, scale: '.9' }, { opacity: .9, scale: '1.04', offset: .3 }, { opacity: 0, scale: '1' }], { duration: 520, easing: 'ease-out', fill: 'forwards' });
+      setTimeout(function () { fl.remove(); }, 560);
+    }
+    // 3) 테두리가 퍼져 나가는 고리
+    var ring = div('left:' + ex + 'px;top:' + ey + 'px;width:' + ew + 'px;height:' + eh + 'px;z-index:29;pointer-events:none;box-shadow:inset 0 0 0 1.4px ' + (o.ring || '#D3FF31'));
+    scr.appendChild(ring);
+    anim(ring, [{ opacity: .9, scale: '1' }, { opacity: 0, scale: o.ringScale || '1.5' }], { duration: 520, delay: 90, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' });
+    setTimeout(function () { ring.remove(); }, 660);
+    // 4) 부호 폭죽
+    var pad = 46, W = ew + pad * 2, H = eh + pad * 2, c = document.createElement('canvas'), dpr = Math.min(3, (window.devicePixelRatio || 1) * k);
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    c.style.cssText = 'position:absolute;left:' + (ex - pad) + 'px;top:' + (ey - pad) + 'px;width:' + W + 'px;height:' + H + 'px;z-index:30;pointer-events:none';
+    scr.appendChild(c);
+    var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var cx = W / 2, cy = H / 2, R0 = Math.max(ew, eh) / 2, N = o.n || 16, ps = [], t0 = performance.now();
+    for (var i = 0; i < N; i++) {
+      var a = (i / N) * Math.PI * 2 + (Math.random() - .5) * .5, kk = i % 3, dot = i % 4 === 3;
+      var sx0 = cx + Math.cos(a) * ew * .5, sy0 = cy + Math.sin(a) * eh * .5, dist = 14 + Math.random() * 22;
+      ps.push({ x: sx0, y: sy0, vx: Math.cos(a) * dist, vy: Math.sin(a) * dist, k: kk, dot: dot, col: SPK[kk].c[Math.random() < .5 ? 0 : 1], size: 5 + Math.random() * 4, d: Math.random() * 80, life: 520 + Math.random() * 260 });
+    }
+    (function frame(now) {
+      if (!c.isConnected) return;
+      x.clearRect(0, 0, W, H); var alive = 0;
+      ps.forEach(function (p) {
+        var q = (now - t0 - p.d) / p.life; if (q < 0) { alive++; return; } if (q >= 1) return; alive++;
+        var e = 1 - Math.pow(1 - q, 3); x.globalAlpha = q < .15 ? q / .15 : 1 - Math.pow((q - .15) / .85, 2);
+        var px = p.x + p.vx * e, py = p.y + p.vy * e;
+        if (p.dot) { x.fillStyle = p.col; x.beginPath(); x.arc(px, py, p.size * .28 * (1 - q * .5), 0, 6.2832); x.fill(); }
+        else sym(x, SPK[p.k].s, px, py, p.size * (1 - q * .35), p.col);
+      });
+      x.globalAlpha = 1;
+      if (alive) requestAnimationFrame(frame); else c.remove();
+    })(t0);
+  };
+
   /* ---------- 화면이 바뀔 때 (app.js show에서 부름) ---------- */
   window.COMMA_MOTION = function (scr, k, info) {
     var prev = info.prev, pk = info.prevKey || '';
