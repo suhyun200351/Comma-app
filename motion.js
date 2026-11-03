@@ -698,6 +698,8 @@
     var DS = window.COMMA_BOOK_SCALE(w, h), M0 = C1 - 40, MD = 560;
     anim(book, [{ transform: 'translate(' + tx + 'px,' + ty + 'px) scale(' + S1 + ')' }, { transform: 'translate(' + (24 - x) + 'px,' + (196 - y) + 'px) scale(' + DS + ')' }], { duration: MD, delay: M0, easing: EZ, fill: 'forwards' });
     anim(inside, [{ boxShadow: '0 18px 40px rgba(0,0,0,.45)' }, { boxShadow: '0 0 0 rgba(0,0,0,0)' }], { duration: MD, delay: M0, fill: 'forwards' });
+    // 펼쳐질 때: 책 색(가입 판단 코랄 · 금액 설계 라벤더 · 가입 후 시안)으로 빛이 번지고, 속지 사이에서 부호가 솟아오름
+    if (!RM) bookMagic(L, card, w * S1, h * S1, 196.5 + w * S1 / 2, 426, 600, C0 + 120);
     var NAV = M0 + MD - 460;
     setTimeout(function () {
       anim(dim, [{ opacity: .55 }, { opacity: 0 }], { duration: 460, fill: 'forwards' });
@@ -705,6 +707,42 @@
       BOOK_NAV = true; go(); BOOK_NAV = false;
     }, NAV);
     setTimeout(function () { anim(L, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' }); setTimeout(function () { L.remove(); busyFx = false; }, 130); }, M0 + MD + 20);
+  }
+  function bookMagic(L, card, bw, bh, cx, cy, t1, t2) {
+    var label = txt(card), ci = /금액 설계/.test(label) ? 2 : /가입 후/.test(label) ? 3 : 1; // COIN_SET 번호
+    var symOf = { 1: '+', 2: '%', 3: '-' }, main = COIN_SET[ci];
+    // 1) 책 뒤로 번지는 빛 (펼친 책 크기만큼)
+    var gx = cx - bw / 2, glow = div('left:' + (gx - bw * 1.4) + 'px;top:' + (cy - bh * 0.95) + 'px;width:' + (bw * 2.8) + 'px;height:' + (bh * 1.9) + 'px;pointer-events:none;background:radial-gradient(closest-side,' + main[1] + ' 0%,' + main[0] + '66 45%,transparent 100%);opacity:0');
+    L.insertBefore(glow, L.children[1] || null);
+    anim(glow, [{ opacity: 0, scale: '.6' }, { opacity: .9, scale: '1', offset: .35 }, { opacity: .6, scale: '1.05', offset: .7 }, { opacity: 0, scale: '1.1' }], { duration: t2 - t1 + 500, delay: t1, easing: 'ease-out', fill: 'both' });
+    // 2) 속지 사이(책등 = 가운데)에서 부호가 위로 솟아 퍼짐
+    var c = document.createElement('canvas'), dpr = Math.min(3, (window.devicePixelRatio || 1) * ((api().scale && api().scale()) || 1));
+    c.width = Math.round(393 * dpr); c.height = Math.round(852 * dpr); c.style.cssText = 'position:absolute;left:0;top:0;width:393px;height:852px;pointer-events:none';
+    L.appendChild(c);
+    var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var sx = cx - bw / 2, N = 40, ps = [], T0 = performance.now();
+    for (var i = 0; i < N; i++) {
+      var mine = Math.random() < .65, k = mine ? ci : 1 + Math.floor(Math.random() * 3);
+      var a = -Math.PI / 2 + (Math.random() - .5) * 2.2, sp = 90 + Math.random() * 170;
+      ps.push({ x: sx + (Math.random() - .5) * bw * 1.7, y: cy - bh * (.25 + Math.random() * .3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60,
+        s: symOf[k] || ',', col: COIN_SET[k][Math.random() < .35 ? 0 : 1], size: 7 + Math.random() * 7, d: t1 + 80 + Math.random() * (t2 - t1 - 80), life: 700 + Math.random() * 500, spin: (Math.random() - .5) * 4 });
+    }
+    // 반짝 점 몇 개
+    for (var j = 0; j < 14; j++) ps.push({ dot: 1, x: sx + (Math.random() - .5) * bw * 1.8, y: cy + (Math.random() - .5) * bh * .8, vx: 0, vy: -20 - Math.random() * 30, col: '#F7F7F5', size: 1.2 + Math.random() * 1.4, d: t1 + Math.random() * (t2 - t1), life: 500 + Math.random() * 400 });
+    var end = t2 + 1300;
+    (function frame(now) {
+      if (!c.isConnected) return;
+      var t = now - T0; x.clearRect(0, 0, 393, 852);
+      ps.forEach(function (p) {
+        var q = (t - p.d) / p.life; if (q < 0 || q >= 1) return;
+        var e = 1 - Math.pow(1 - q, 2.2), px = p.x + p.vx * e * .9, py = p.y + p.vy * e + 40 * q * q;
+        x.globalAlpha = q < .15 ? q / .15 : Math.pow(1 - (q - .15) / .85, 1.4);
+        if (p.dot) { x.fillStyle = p.col; x.beginPath(); x.arc(px, py, p.size * (1 - q * .5), 0, 6.2832); x.fill(); return; }
+        x.save(); x.translate(px, py); x.rotate(p.spin * q); sym(x, p.s, 0, 0, p.size * (1 - q * .3), p.col); x.restore();
+      });
+      x.globalAlpha = 1;
+      if (t < end) requestAnimationFrame(frame); else c.remove();
+    })(T0);
   }
   var BOOK_NAV = false;
   // 홈의 질문책 7권: 어느 책을 눌러도 펼쳐지며 그 책의 상세(B3-1)로
