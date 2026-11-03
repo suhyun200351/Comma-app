@@ -289,16 +289,13 @@
   };
 })();
 
-/* 숨은 동작(11/3): 화면을 쉬지 않고 20번 연타하면 S-7 「연결이 끊겼어요」 — 굴비 실이 툭 끊겨 떨어짐. 다시 시도 → 원래 화면 */
+/* 11/3: S-7 「연결이 끊겼어요」가 30초쯤마다 갑자기 뜸(25~35초 사이 랜덤) — 굴비 실이 툭 끊겨 떨어짐. 다시 시도 → 원래 화면, 그때부터 다시 30초쯤 */
 (function () {
-  var n = 0, last = 0, NEED = 20, GAP = 700;
-  document.addEventListener('pointerdown', function () {
-    var now = Date.now(), key = window.COMMA && window.COMMA.key;
-    if (!key || key === 'S-7' || /^A-1/.test(key)) { n = 0; return; }
-    n = now - last < GAP ? n + 1 : 1; last = now;
-    if (n >= NEED) {
-      n = 0;
-      setTimeout(function () { if (window.COMMA_API && window.COMMA.key !== 'S-7') window.COMMA_API.go('S-7'); }, 160);
-    }
-  }, true);
+  var next = function () { return Date.now() + 25000 + Math.random() * 10000; }, at = next();
+  setInterval(function () {
+    var key = window.COMMA && window.COMMA.key;
+    if (!key || key === 'S-7') { at = next(); return; }
+    if (/^A-1/.test(key) || document.hidden || document.querySelector('.screen.fx')) return;   // 온보딩 · 책 펼치는 중엔 미룸
+    if (Date.now() >= at && window.COMMA_API) { at = next(); window.COMMA_API.go('S-7'); }
+  }, 1000);
 })();
