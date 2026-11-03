@@ -714,7 +714,24 @@
     var A = api(), g = scr.querySelector('[data-name="Group 26"]'); if (!g) return;
     var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && (BOOK_OF[c.dataset.name] || c.dataset.mybook !== undefined); });
     cards.forEach(function (c) { c.style.cursor = 'pointer'; });
+    // 내가 남긴 질문책: 오른쪽 클릭(컴퓨터) · 꾹 누르기(폰) → 지우기
+    var mine = cards.filter(function (c) { return c.dataset.mybook !== undefined; });
+    function cardAt(x, y) { return mine.slice().reverse().filter(function (c) { var b = c.getBoundingClientRect(); return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom; })[0]; }
+    if (mine.length) {
+      scr.addEventListener('contextmenu', function (e) { var c = cardAt(e.clientX, e.clientY); if (!c) return; e.preventDefault(); e.stopPropagation(); askDelete(scr, c); });
+      var lp = null;
+      scr.addEventListener('touchstart', function (e) {
+        var t0 = e.touches[0], c = t0 && cardAt(t0.clientX, t0.clientY); if (!c || e.touches.length > 1) return;
+        var sx = t0.clientX, sy = t0.clientY;
+        lp = { c: c, sx: sx, sy: sy, id: setTimeout(function () { lp = null; scr._noClick = performance.now() + 900; askDelete(scr, c); }, 550) };
+        anim(c, [{ scale: '1' }, { scale: '.96' }], { duration: 550, easing: 'ease-out' });
+      }, { passive: true });
+      var cancel = function (e) { if (!lp) return; if (e && e.type === 'touchmove') { var t1 = e.touches[0]; if (Math.hypot(t1.clientX - lp.sx, t1.clientY - lp.sy) < 10) return; } clearTimeout(lp.id); lp = null; };
+      scr.addEventListener('touchmove', cancel, { passive: true }); scr.addEventListener('touchend', cancel, { passive: true }); scr.addEventListener('touchcancel', cancel, { passive: true });
+    }
     scr.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('.delask')) return;                       // 지우기 창 안의 버튼
+      if (performance.now() < (scr._noClick || 0)) { e.stopPropagation(); e.preventDefault(); return; } // 꾹 누른 뒤 손 뗄 때 책이 열리지 않게
       // 책 표지 그림(img)은 클릭을 통과시키므로 손가락 위치로 맨 위 책을 찾음
       var t = e.target, fx = t.closest && t.closest('.fixed');
       if (fx && t.parentElement !== fx) return;             // 진짜 버튼(질문 남기기 등)
@@ -731,6 +748,34 @@
       if (RM) { A.go('B3-1'); return; }
       bookOpen(card, scr, function () { A.go('B3-1'); });
     }, true);
+  }
+  // 「이 질문을 지울까요?」 작은 창 → 지우기: 책이 작아지며 사라지고 홈을 다시 그림
+  function askDelete(scr, card) {
+    if (scr.querySelector('.delask')) return;
+    var sb = scr.getBoundingClientRect(), k = sb.width / 393, b = card.getBoundingClientRect();
+    var cx = (b.left + b.width / 2 - sb.left) / k, cy = (b.top + b.height / 2 - sb.top) / k;
+    var dim = div('left:0;top:0;width:393px;height:' + (sb.height / k) + 'px;z-index:40;background:rgba(0,0,0,.35)'); dim.className = 'delask';
+    var W = 200, H = 112, x = Math.max(16, Math.min(393 - W - 16, cx - W / 2)), y = cy - H / 2;
+    var box = div('left:' + x + 'px;top:' + y + 'px;width:' + W + 'px;height:' + H + 'px;background:rgb(45,45,43);box-shadow:inset 0 0 0 1px rgb(110,112,118);font-family:\'Pretendard Variable\',Pretendard,sans-serif');
+    var t = div('left:16px;top:16px;width:' + (W - 32) + 'px;color:#F7F7F5;font-size:15px;font-weight:600;line-height:21px;letter-spacing:-.3px'); t.textContent = '이 질문을 지울까요?';
+    function btn(label, left, col) { var d = div('left:' + left + 'px;top:56px;width:' + ((W - 40) / 2) + 'px;height:40px;box-shadow:inset 0 0 0 1px ' + col + ';color:' + col + ';font-size:14px;line-height:40px;text-align:center;cursor:pointer;letter-spacing:-.28px'); d.textContent = label; return d; }
+    var no = btn('취소', 16, 'rgb(158,158,153)'), yes = btn('지우기', 16 + (W - 40) / 2 + 8, '#EFA6A3');
+    box.appendChild(t); box.appendChild(no); box.appendChild(yes); dim.appendChild(box); scr.appendChild(dim);
+    var opened = performance.now();
+    anim(dim, [{ opacity: 0 }, { opacity: 1 }], { duration: 160 });
+    function close() { var a = anim(dim, [{ opacity: 1 }, { opacity: 0 }], { duration: 140, fill: 'forwards' }); setTimeout(function () { dim.remove(); }, 150); }
+    dim.addEventListener('click', function (e) { e.stopPropagation(); if (e.target === dim && performance.now() - opened > 400) close(); });
+    no.addEventListener('click', function (e) { if (performance.now() - opened < 400) return; close(); });
+    yes.addEventListener('click', function (e) {
+      if (performance.now() - opened < 400) return;
+      var D = window.COMMA_DATA, idx = +card.dataset.mybook, bk = (D.myBooks || [])[idx]; if (!bk) return close();
+      D.myBooks.splice(idx, 1);
+      var pi = (D.posted || []).indexOf(bk.q); if (pi >= 0) D.posted.splice(pi, 1);
+      var na = {}; Object.keys(D.bookAns || {}).forEach(function (key) { var m = /^my:(\d+)$/.exec(key); if (!m) { na[key] = D.bookAns[key]; return; } var n = +m[1]; if (n < idx) na[key] = D.bookAns[key]; else if (n > idx) na['my:' + (n - 1)] = D.bookAns[key]; }); D.bookAns = na;
+      dim.remove();
+      anim(card, [{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.6', rotate: '-12deg' }], { duration: 300, easing: 'cubic-bezier(.5,0,.9,.4)', fill: 'forwards' });
+      setTimeout(function () { var A = api(); A.show(window.COMMA.key, { replace: true }); setTimeout(function () { if (window.COMMA_TOAST) window.COMMA_TOAST('질문을 지웠어요'); }, 200); }, 320);
+    });
   }
   // 상세 화면 표지 자리(24, 196 · 167.8 × 206)에 맞는 배율
   window.COMMA_BOOK_SCALE = function (w, h) { return Math.min(167.84 / w, 206 / h); };
