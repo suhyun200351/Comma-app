@@ -63,11 +63,11 @@
     while (p && !isWrap(p)) { anc.push(p); p = p.parentElement; }
     if (opt && opt.maxH) {
       var best = null;
-      for (var i = 0; i < anc.length; i++) { var r = rel(anc[i], scr); if (r.h <= opt.maxH && r.w <= W) best = anc[i]; else if (best) break; }
+      for (var i = 0; i < anc.length; i++) { var r = rel(anc[i], scr); if (r.h <= opt.maxH + 0.6 && r.w <= W + 0.6) best = anc[i]; else if (best) break; }
       return best || t;
     }
     for (var j = 0; j < anc.length; j++) { var r2 = rel(anc[j], scr); if (r2.h > 110) break; if (anc[j].dataset.comp || anc[j].dataset.paint) return anc[j]; }
-    for (var k = 0; k < anc.length; k++) { if (rel(anc[k], scr).h <= 64) return anc[k]; }
+    for (var k = 0; k < anc.length; k++) { if (rel(anc[k], scr).h <= 64.6) return anc[k]; }
     return t;
   }
 
