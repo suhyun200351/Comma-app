@@ -710,11 +710,7 @@
   }
   function bookMagic(L, card, bw, bh, cx, cy, t1, t2) {
     var label = txt(card), ci = /금액 설계/.test(label) ? 2 : /가입 후/.test(label) ? 3 : 1; // COIN_SET 번호
-    var symOf = { 1: '+', 2: '%', 3: '-' }, main = COIN_SET[ci];
-    // 1) 책 뒤로 번지는 빛 (펼친 책 크기만큼)
-    var gx = cx - bw / 2, glow = div('left:' + (gx - bw * 1.4) + 'px;top:' + (cy - bh * 0.95) + 'px;width:' + (bw * 2.8) + 'px;height:' + (bh * 1.9) + 'px;pointer-events:none;background:radial-gradient(closest-side,' + main[1] + ' 0%,' + main[0] + '66 45%,transparent 100%);opacity:0');
-    L.insertBefore(glow, L.children[1] || null);
-    anim(glow, [{ opacity: 0, scale: '.6' }, { opacity: .9, scale: '1', offset: .35 }, { opacity: .6, scale: '1.05', offset: .7 }, { opacity: 0, scale: '1.1' }], { duration: t2 - t1 + 500, delay: t1, easing: 'ease-out', fill: 'both' });
+    var symOf = { 1: '+', 2: '%', 3: '-' };
     // 2) 속지 사이(책등 = 가운데)에서 부호가 위로 솟아 퍼짐
     var c = document.createElement('canvas'), dpr = Math.min(3, (window.devicePixelRatio || 1) * ((api().scale && api().scale()) || 1));
     c.width = Math.round(393 * dpr); c.height = Math.round(852 * dpr); c.style.cssText = 'position:absolute;left:0;top:0;width:393px;height:852px;pointer-events:none';
@@ -727,8 +723,6 @@
       ps.push({ x: sx + (Math.random() - .5) * bw * 1.7, y: cy - bh * (.25 + Math.random() * .3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60,
         s: symOf[k] || ',', col: COIN_SET[k][Math.random() < .35 ? 0 : 1], size: 7 + Math.random() * 7, d: t1 + 80 + Math.random() * (t2 - t1 - 80), life: 700 + Math.random() * 500, spin: (Math.random() - .5) * 4 });
     }
-    // 반짝 점 몇 개
-    for (var j = 0; j < 14; j++) ps.push({ dot: 1, x: sx + (Math.random() - .5) * bw * 1.8, y: cy + (Math.random() - .5) * bh * .8, vx: 0, vy: -20 - Math.random() * 30, col: '#F7F7F5', size: 1.2 + Math.random() * 1.4, d: t1 + Math.random() * (t2 - t1), life: 500 + Math.random() * 400 });
     var end = t2 + 1300;
     (function frame(now) {
       if (!c.isConnected) return;
