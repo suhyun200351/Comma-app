@@ -342,7 +342,7 @@
     var x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
     var N = o.n || Math.round(w * h / 2600), U = o.u || 3.2, ps = [];
     function spawn(p, now, first) {
-      p.x = 6 + Math.random() * (w - 12); p.y = 6 + Math.random() * (h - 12);
+      for (var tr = 0; tr < 40; tr++) { p.x = 6 + Math.random() * (w - 12); p.y = 6 + Math.random() * (h - 12); if (!o.hole || !(p.x > o.hole[0] && p.x < o.hole[0] + o.hole[2] && p.y > o.hole[1] && p.y < o.hole[1] + o.hole[3])) break; }
       p.k = Math.random() < .15 ? 3 : Math.floor(Math.random() * 3);
       p.col = SPK[p.k].c[Math.random() < .5 ? 0 : 1];
       p.size = U * (0.6 + Math.random() * 0.9); p.life = 600 + Math.random() * 1400;
@@ -543,6 +543,8 @@
     var wob = div('left:0;top:0;width:100%;height:100%;transform-style:preserve-3d');
     var card = div('left:0;top:0;width:100%;height:100%;transform-style:preserve-3d');
     front.parentNode.insertBefore(st, front); st.appendChild(wob); wob.appendChild(card);
+    // 카드 뒤 반짝이: 카드 둘레(좌우 여백 · 위아래)에 서브색 부호가 반짝반짝
+    if (FX_SPARK) { var hp = st.parentNode, pr = A.rel(hp, scr), cr = A.rel(st, scr); starField(hp, -pr.x, cr.y - 64 - pr.y, 393, cr.h + 110, { u: 5.4, n: 50, alpha: 1, hole: [cr.x + 4, 64 + 4, cr.w - 8, cr.h - 8] }); }
     var BF = 'backface-visibility:hidden;-webkit-backface-visibility:hidden;';
     card.appendChild(div('top:0;left:-3px;width:6px;height:100%;background:linear-gradient(180deg,#9A9D8C,#5E6250);transform:rotateY(90deg)'));
     card.appendChild(div('top:0;left:' + (W - 3) + 'px;width:6px;height:100%;background:linear-gradient(180deg,#9A9D8C,#5E6250);transform:rotateY(90deg)'));

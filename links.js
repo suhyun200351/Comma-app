@@ -47,7 +47,7 @@
     var t = api.findText(scr, /^비교하기/); if (t && window.COMMA_SHAKE) window.COMMA_SHAKE(api.pick(t, scr), 5);
   };
   var savePlan = function (api) {
-    if (!st().loggedIn) return api.go('C0-2');
+    if (!st().loggedIn) st().loggedIn = true; // 다음 행동까지 정했으면 로그인 모달 없이 바로 저장 (전시용)
     var fin = function () { st().savedPlan = true; st().e1x = true; api.go('E1-1'); setTimeout(function () { if (window.COMMA_TOAST) window.COMMA_TOAST('계획을 저장했어요'); }, 250); };
     if (window.COMMA_CARD_OUT) window.COMMA_CARD_OUT(fin); else fin();
   };
