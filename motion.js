@@ -180,31 +180,37 @@
     var oldFall = svg.querySelector('g.ffall'); if (oldFall) { while (oldFall.firstChild) svg.insertBefore(oldFall.firstChild, oldFall); oldFall.remove(); }
     svg.appendChild(fishG); fishG.removeAttribute('transform'); fishG.style.opacity = '';
     rope.forEach(function (r) { svg.appendChild(r.p); r.p.style.opacity = ''; });
-    var D2R = Math.PI / 180, P = 1250, TC = 2 * P;   // 흔들림 한 번 1.25초 · 세 번째 왼쪽 꼭대기에서 끊김
+    var D2R = Math.PI / 180, P = 1300, TC = 2 * P - 150;   // 흔들림 한 번 1.3초 · 점점 크게 흔들려 세 번째로 왼쪽 위로 들려 올라가는 중에 끊김
     function bez(A, C, E, u) { var v = 1 - u; return { x: v * v * A.x + 2 * u * v * C.x + u * u * E.x, y: v * v * A.y + 2 * u * v * C.y + u * u * E.y }; }
     function tan(A, C, E, u) { var dx = 2 * (1 - u) * (C.x - A.x) + 2 * u * (E.x - C.x), dy = 2 * (1 - u) * (C.y - A.y) + 2 * u * (E.y - C.y); return Math.atan2(dy, dx) / D2R - 90; }
     function place(r, pt, ang) { r.p.setAttribute('transform', 'translate(' + (pt.x - AX).toFixed(2) + ' ' + (pt.y - r.cy).toFixed(2) + ') rotate(' + ang.toFixed(1) + ' ' + AX + ' ' + r.cy.toFixed(2) + ')'); }
     var A0 = { x: AX, y: 0 };
     function shape(t) {   // 끊기기 전: 끝은 진자, 가운데는 늦게 따라와 활처럼 휨
-      var w = 2 * Math.PI / P, amp = (15 + 10 * Math.min(t / TC, 1)) * D2R, th = amp * Math.cos(w * t), dth = -amp * w * Math.sin(w * t);   // dth: 1ms당 각도
-      var E = { x: AX - LEN * Math.sin(th), y: LEN * Math.cos(th) };
-      var ph = .32 * th - 170 * dth, C = { x: AX - LEN * .5 * Math.sin(ph), y: LEN * .5 * Math.cos(ph) };
-      return { E: E, C: C };
+      var g = Math.min(t / TC, 1); g = g * g * (3 - 2 * g);
+      var w = 2 * Math.PI / P, amp = (16 + 28 * g) * D2R, th = amp * Math.cos(w * t), dth = -amp * w * Math.sin(w * t);   // 16° → 44°로 점점 크게 · dth: 1ms당 각도
+      var ten = 0, L = LEN;
+      var E = { x: AX - L * Math.sin(th), y: L * Math.cos(th) };
+      var ph = .42 * th - 75 * dth, C = { x: AX - L * .5 * Math.sin(ph), y: L * .5 * Math.cos(ph) };
+      return { E: E, C: C, ten: ten };
     }
-    var t0 = performance.now(), cut = null, fall = null, bits = [];
+    var t0 = performance.now(), cut = null, fall = null, bits = [], fishBase = '';
+    function sq(sx, sy) { return ' translate(' + AX + ' ' + LEN + ') scale(' + sx.toFixed(3) + ' ' + sy.toFixed(3) + ') translate(' + (-AX) + ' ' + (-LEN) + ')'; }
     function frame(now) {
       if (!svg.isConnected) return;
       var t = now - t0;
       if (t < TC) {
         var S = shape(t);
         rope.forEach(function (r) { place(r, bez(A0, S.C, S.E, r.s), tan(A0, S.C, S.E, r.s)); });
-        fishG.setAttribute('transform', 'translate(' + (S.E.x - AX).toFixed(2) + ' ' + (S.E.y - LEN).toFixed(2) + ') rotate(' + tan(A0, S.C, S.E, 1).toFixed(1) + ' ' + AX + ' ' + LEN + ')');
+        fishG.setAttribute('transform', 'translate(' + (S.E.x - AX).toFixed(2) + ' ' + (S.E.y - LEN).toFixed(2) + ') rotate(' + tan(A0, S.C, S.E, 1).toFixed(1) + ' ' + AX + ' ' + LEN + ')' + '');
+        fishBase = 'translate(' + (S.E.x - AX).toFixed(2) + ' ' + (S.E.y - LEN).toFixed(2) + ') rotate(' + tan(A0, S.C, S.E, 1).toFixed(1) + ' ' + AX + ' ' + LEN + ')';
       } else {
         if (!cut) {   // 툭 — 아래쪽 끈 + 굴비를 한 덩어리로 떼어 냄
           var S0 = shape(TC); cut = { E: bez(A0, S0.C, S0.E, SC), C: bez(A0, S0.C, S0.E, SC / 2), tilt: tan(A0, S0.C, S0.E, 1) };
           fall = document.createElementNS(NS, 'g'); fall.setAttribute('class', 'ffall'); fall.style.transformBox = 'view-box'; fall.style.transformOrigin = '0 0'; svg.appendChild(fall);
           rope.forEach(function (r) { if (r.s >= SC) fall.appendChild(r.p); }); fall.appendChild(fishG);
           cut.pivot = { x: S0.E.x, y: S0.E.y + 30 };
+          var Sb = shape(TC - 20); cut.vx = (S0.E.x - Sb.E.x) / 20 * 1000 * .3; cut.vy = (S0.E.y - Sb.E.y) / 20 * 1000 * .3;   // 들려 올라가던 힘 그대로 날아감
+          cut.vr = (tan(A0, S0.C, S0.E, 1) - tan(A0, Sb.C, Sb.E, 1)) / 20 * 1000 * .25;
           for (var i = 0; i < 6; i++) {
             var bit = document.createElementNS(NS, 'rect'); bit.setAttribute('width', 1.4); bit.setAttribute('height', 3.6); bit.setAttribute('fill', i % 2 ? '#A9A8A3' : '#D3FF31'); bit.style.transformBox = 'view-box'; bit.style.transformOrigin = '0 0';
             svg.appendChild(bit); var ag = Math.random() * Math.PI * 2; bits.push({ el: bit, vx: Math.cos(ag) * (30 + Math.random() * 40), vy: Math.sin(ag) * (30 + Math.random() * 40) - 30, r: Math.random() * 360, vr: (Math.random() - .5) * 900 });
@@ -212,18 +218,20 @@
         }
         var q = (t - TC) / 1000;
         // 아래: 살짝 튀어 오른 뒤 왼쪽으로 기울며 뚝
-        var fx = -28 * q, fy = -45 * q + .5 * 1500 * q * q, fr = 70 * q + 40 * q * q;
+        var fx = cut.vx * q * Math.exp(-.6 * q), fy = cut.vy * q + .5 * 560 * q * q, fr = cut.vr * q + 26 * q * q;
+        var j = .16 * Math.exp(-3.4 * q) * Math.cos(13 * q);   // 끊기는 순간 굴비가 말랑하게 찌부 → 늘어남 → 출렁
+        fishG.setAttribute('transform', fishBase + sq(1 + j * .6, 1 - j));
         fall.setAttribute('transform', 'translate(' + fx.toFixed(2) + ' ' + fy.toFixed(2) + ') rotate(' + fr.toFixed(1) + ' ' + cut.pivot.x.toFixed(1) + ' ' + cut.pivot.y.toFixed(1) + ')');
-        fall.style.opacity = Math.max(0, 1 - Math.max(0, q - .3) / .4).toFixed(3);
+        fall.style.opacity = Math.max(0, 1 - Math.max(0, q - .75) / .65).toFixed(3);
         // 위: 끊긴 끝이 채찍처럼 휘며 위로 튕겨 올라가 출렁 → 가운데로 늘어짐
-        var R = { x: AX, y: LEN * SC * .84 }, k = Math.exp(-3.2 * q), osc = Math.cos(10 * q);
-        var E2 = { x: R.x + (cut.E.x - R.x) * k * osc, y: R.y + (cut.E.y - R.y) * k * Math.cos(13 * q) - 14 * Math.exp(-5 * q) * Math.sin(13 * q) };
-        var mid = { x: (A0.x + E2.x) / 2, y: (A0.y + E2.y) / 2 }, dx = E2.x - A0.x, dy = E2.y - A0.y, dl = Math.hypot(dx, dy) || 1, wob = 22 * Math.exp(-2.6 * q) * Math.sin(11 * q + .6);
+        var R = { x: AX, y: LEN * SC * .8 }, k = Math.exp(-2.1 * q), osc = Math.cos(6.5 * q);
+        var E2 = { x: R.x + (cut.E.x - R.x) * k * osc, y: R.y + (cut.E.y - R.y) * k * Math.cos(8.5 * q) - 26 * Math.exp(-3 * q) * Math.sin(8.5 * q) };
+        var mid = { x: (A0.x + E2.x) / 2, y: (A0.y + E2.y) / 2 }, dx = E2.x - A0.x, dy = E2.y - A0.y, dl = Math.hypot(dx, dy) || 1, wob = 30 * Math.exp(-1.9 * q) * Math.sin(7.5 * q + .6);
         var C2 = { x: mid.x - dy / dl * wob, y: mid.y + dx / dl * wob };
         rope.forEach(function (r) { if (r.s < SC) { var u = r.s / SC; place(r, bez(A0, C2, E2, u), tan(A0, C2, E2, u)); } });
-        bits.forEach(function (b) { var x = cut.E.x + b.vx * q, y = cut.E.y + b.vy * q + 300 * q * q; b.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + (b.r + b.vr * q).toFixed(0) + ')'); b.el.style.opacity = Math.max(0, 1 - q / .55).toFixed(2); });
-        if (q > .6 && bits.length) { bits.forEach(function (b) { b.el.remove(); }); bits = []; }
-        if (q > 3.2) return;
+        bits.forEach(function (b) { var x = cut.E.x + b.vx * q, y = cut.E.y + b.vy * q + 300 * q * q; b.el.setAttribute('transform', 'translate(' + x.toFixed(1) + ' ' + y.toFixed(1) + ') rotate(' + (b.r + b.vr * q).toFixed(0) + ')'); b.el.style.opacity = Math.max(0, 1 - q / .75).toFixed(2); });
+        if (q > .8 && bits.length) { bits.forEach(function (b) { b.el.remove(); }); bits = []; }
+        if (q > 4.5) return;
       }
       svg._fishRaf = requestAnimationFrame(frame);
     }
