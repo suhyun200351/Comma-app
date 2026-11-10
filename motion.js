@@ -835,10 +835,21 @@
   // 홈의 질문책 7권: 어느 책을 눌러도 펼쳐지며 그 책의 상세(B3-1)로
   var BOOK_OF = { 'Frame 2087332315': 'household', 'Frame 2087332316': 'income', 'Frame 2087332318': 'interest', 'Frame 2087332317': 'pref',
     'Frame 2087332314': 'special', 'Frame 2087332313': 'autodebit', 'Group': 'prefcheck' };
+  var READ_DIM = 'brightness(.58) saturate(.85)';
   function bookSetup(scr) {
     var A = api(), g = scr.querySelector('[data-name="Group 26"]'); if (!g) return;
     var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && (BOOK_OF[c.dataset.name] || c.dataset.mybook !== undefined); });
     cards.forEach(function (c) { c.style.cursor = 'pointer'; });
+    // 11/10: 한 번 펼쳐 본 책은 살짝 어둡게(눌러본 것처럼). 방금 보고 나온 책은 홈에 돌아온 뒤 천천히 어두워짐
+    (function () {
+      var D0 = window.COMMA_DATA || {}, read = D0.readBooks || {}, just = D0.justRead; D0.justRead = null;
+      cards.forEach(function (c) {
+        var id = c.dataset.mybook !== undefined ? 'my:' + c.dataset.mybook : BOOK_OF[c.dataset.name];
+        if (!read[id]) return;
+        if (id === just && !RM) { c.style.filter = 'none'; setTimeout(function () { c.style.transition = 'filter .7s ease'; c.style.filter = READ_DIM; }, 450); }
+        else c.style.filter = READ_DIM;
+      });
+    })();
     // 내가 남긴 질문책: 오른쪽 클릭(컴퓨터) · 꾹 누르기(폰) → 지우기
     var mine = cards.filter(function (c) { return c.dataset.mybook !== undefined; });
     function cardAt(x, y) { return mine.slice().reverse().filter(function (c) { var b = c.getBoundingClientRect(); return x >= b.left && x <= b.right && y >= b.top && y <= b.bottom; })[0]; }
@@ -868,6 +879,8 @@
       e.stopPropagation(); e.preventDefault();
       var D = window.COMMA_DATA, id = card.dataset.mybook !== undefined ? 'my:' + card.dataset.mybook : BOOK_OF[card.dataset.name], r = A.rel(card, scr);
       D.book = id;
+      (D.readBooks = D.readBooks || {})[id] = true; D.justRead = id;
+      card.style.transition = ''; card.style.filter = '';                                   // 펼칠 땐 원래 밝기로
       var ins = cardInset(card);
       D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: ins[2], h: ins[3], ix: ins[0], iy: ins[1] };
       if (RM) { A.go('B3-1'); return; }
@@ -897,6 +910,7 @@
       D.myBooks.splice(idx, 1);
       var pi = (D.posted || []).indexOf(bk.q); if (pi >= 0) D.posted.splice(pi, 1);
       var na = {}; Object.keys(D.bookAns || {}).forEach(function (key) { var m = /^my:(\d+)$/.exec(key); if (!m) { na[key] = D.bookAns[key]; return; } var n = +m[1]; if (n < idx) na[key] = D.bookAns[key]; else if (n > idx) na['my:' + (n - 1)] = D.bookAns[key]; }); D.bookAns = na;
+      var nr = {}; Object.keys(D.readBooks || {}).forEach(function (key) { var m = /^my:(\d+)$/.exec(key); if (!m) { nr[key] = true; return; } var n = +m[1]; if (n < idx) nr[key] = true; else if (n > idx) nr['my:' + (n - 1)] = true; }); D.readBooks = nr;
       dim.remove();
       anim(card, [{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.6', rotate: '-12deg' }], { duration: 300, easing: 'cubic-bezier(.5,0,.9,.4)', fill: 'forwards' });
       setTimeout(function () { var A = api(); A.show(window.COMMA.key, { replace: true }); setTimeout(function () { if (window.COMMA_TOAST) window.COMMA_TOAST('질문을 지웠어요'); }, 200); }, 320);
