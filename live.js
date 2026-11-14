@@ -945,21 +945,21 @@
     if (bar && TH && parseFloat(bar.style.top) > 600) bar.style.background = 'linear-gradient(' + TH.bg.replace('rgb', 'rgba').replace(')', ',0)') + ',' + TH.bg + ' 28%)';
   }
   /* 11/14 예심 후: 앱 이름 COMMA → F,LOG. 동전 아이콘은 남기고 COMMA 글자만 F,LOG 로고(수현 피그마 「플로그 로고」 원본)로 바꿈 */
-  var FLOG = 'assets/flog_logo.svg', FLOG_W = 198, FLOG_H = 89, FLOG_CAP = 62.5;
+  var FLOG = 'assets/flog_logo.svg?v=2', FLOG_W = 141, FLOG_H = 89, FLOG_CAP = 70.3, FLOG_TOP = 0.61;   // 원본 비율 그대로 — 글자 높이만 예전 COMMA 글자에 맞추고 가로는 비율대로
   function flogLogo(scr) {
     [].forEach.call(scr.querySelectorAll('img[src$="5cf39097bae6d073.svg"],img[src$="ba3daaf46e36d1de.svg"]'), function (im) {
       if (im.dataset.flog) return; im.dataset.flog = '1';
       // 헤더(111×28): 왼쪽 28px 동전만 남기고, 옆에 F,LOG
       im.style.clipPath = 'inset(0 ' + (px(im, 'width') - 30) + 'px 0 0)';
-      var k = 22 / FLOG_CAP, lg = document.createElement('img');
+      var k = 23.8 / FLOG_CAP, lg = document.createElement('img');
       lg.className = 'a'; lg.src = FLOG; lg.dataset.name = 'F,LOG 로고'; lg.alt = 'F,LOG';
-      lg.style.cssText = 'position:absolute;left:' + (px(im, 'left') + 37) + 'px;top:' + (px(im, 'top') + 3) + 'px;width:' + (FLOG_W * k).toFixed(1) + 'px;height:' + (FLOG_H * k).toFixed(1) + 'px;pointer-events:none';
+      lg.style.cssText = 'position:absolute;left:' + (px(im, 'left') + 37) + 'px;top:' + (px(im, 'top') + 2.1 - FLOG_TOP * k).toFixed(1) + 'px;width:' + (FLOG_W * k).toFixed(1) + 'px;height:' + (FLOG_H * k).toFixed(1) + 'px;pointer-events:none';
       im.parentElement.insertBefore(lg, im.nextSibling);
     });
     if (scr.dataset.key === 'A-1') {
       var t = scr.querySelector('img[data-name="Group 34"]');
       if (t && !t.dataset.flog) {
-        t.dataset.flog = '1'; var k2 = 44 / FLOG_CAP, w = FLOG_W * k2, pw = px(t.parentElement, 'width') || 217;
+        t.dataset.flog = '1'; var k2 = 44.05 / FLOG_CAP, w = FLOG_W * k2, pw = px(t.parentElement, 'width') || 217;
         t.src = FLOG; t.alt = 'F,LOG';
         t.style.width = w.toFixed(1) + 'px'; t.style.height = (FLOG_H * k2).toFixed(1) + 'px'; t.style.left = ((pw - w) / 2).toFixed(1) + 'px';
       }
