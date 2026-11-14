@@ -836,6 +836,11 @@
   var BOOK_OF = { 'Frame 2087332315': 'household', 'Frame 2087332316': 'income', 'Frame 2087332318': 'interest', 'Frame 2087332317': 'pref',
     'Frame 2087332314': 'special', 'Frame 2087332313': 'autodebit', 'Group': 'prefcheck' };
   var READ_DIM = 'brightness(.58) saturate(.85)';
+  // 11/14: 어둡게 하는 건 책 안쪽만 — 내 질문책의 라임 책갈피(.bmark)는 그대로 밝게
+  function dimCard(c, on, slow) {
+    c.style.filter = ''; c.style.transition = '';
+    [].forEach.call(c.children, function (ch) { if (ch.classList.contains('bmark')) return; ch.style.transition = slow ? 'filter .7s ease' : ''; ch.style.filter = on ? READ_DIM : ''; });
+  }
   function bookSetup(scr) {
     var A = api(), g = scr.querySelector('[data-name="Group 26"]'); if (!g) return;
     var cards = [].filter.call(g.children, function (c) { var r = A.rel(c, scr); return r.w > 100 && r.h > 100 && (BOOK_OF[c.dataset.name] || c.dataset.mybook !== undefined); });
@@ -846,8 +851,8 @@
       cards.forEach(function (c) {
         var id = c.dataset.mybook !== undefined ? 'my:' + c.dataset.mybook : BOOK_OF[c.dataset.name];
         if (!read[id]) return;
-        if (id === just && !RM) { c.style.filter = 'none'; setTimeout(function () { c.style.transition = 'filter .7s ease'; c.style.filter = READ_DIM; }, 450); }
-        else c.style.filter = READ_DIM;
+        if (id === just && !RM) { dimCard(c, false); setTimeout(function () { dimCard(c, true, true); }, 450); }
+        else dimCard(c, true);
       });
     })();
     // 내가 남긴 질문책: 오른쪽 클릭(컴퓨터) · 꾹 누르기(폰) → 지우기
@@ -880,7 +885,7 @@
       var D = window.COMMA_DATA, id = card.dataset.mybook !== undefined ? 'my:' + card.dataset.mybook : BOOK_OF[card.dataset.name], r = A.rel(card, scr);
       D.book = id;
       (D.readBooks = D.readBooks || {})[id] = true; D.justRead = id;
-      card.style.transition = ''; card.style.filter = '';                                   // 펼칠 땐 원래 밝기로
+      dimCard(card, false);                                                                 // 펼칠 땐 원래 밝기로
       var ins = cardInset(card);
       D.bookCard = id === 'household' ? null : { html: card.outerHTML, w: ins[2], h: ins[3], ix: ins[0], iy: ins[1] };
       if (RM) { A.go('B3-1'); return; }

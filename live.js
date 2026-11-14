@@ -920,7 +920,28 @@
     var no = CAT_NO[cat] || 3;
     var bg = scr.querySelector('.bookbg'); if (bg) bg.className = 'bookbg b' + no;
     [].forEach.call(scr.querySelectorAll('.t'), function (t) { if (/^Book \d+$/.test(textOf(t))) setText(t, 'Book ' + no); });
+    /* 11/14 수현 피그마(디자인 11/14 · B3 세 벌): 책 색에 따라 화면 바탕 · 아코디언 머리 · 작은 라벨 색이 바뀜
+       바탕 = #151515 위에 서브색 20%(산호는 25%), 아코디언 머리 = 서브색 면 + 검정 글자 */
+    var TH = BOOK_THEME[no];
+    scr.style.background = TH.bg;
+    var bar = scr.querySelector('[data-name="Frame 2087332311"]'); if (bar && /등록/.test(bar.textContent)) bar.style.background = 'linear-gradient(' + TH.bg.replace('rgb', 'rgba').replace(')', ',0)') + ',' + TH.bg + ' 28%)';
+    [].forEach.call(scr.querySelectorAll('.t'), function (t) {
+      if (t.closest('.under')) return;
+      var x = textOf(t), head = t.parentElement;
+      if (/^(사람들의 경험|비슷한 질문) \d+$/.test(x) && head) {
+        head.style.background = 'linear-gradient(' + TH.acc + ',' + TH.acc + ')';
+        [].forEach.call(t.querySelectorAll('span'), function (sp) { sp.style.color = 'rgb(21,21,21)'; });
+        [].forEach.call(head.querySelectorAll('img'), function (im) { im.style.filter = 'brightness(0)'; im.style.opacity = '.85'; });
+      } else if (/^(실제 청년 적금 가입자 후기|가입 판단|금액 설계|가입 후)$/.test(x) && parseFloat((t.querySelector('span') || {}).style ? t.querySelector('span').style.fontSize : 0) <= 14) {
+        [].forEach.call(t.querySelectorAll('span'), function (sp) { sp.style.color = TH.acc; });
+      }
+    });
   }
+  var BOOK_THEME = {
+    1: { bg: 'rgb(42,66,67)', acc: 'rgb(111,210,215)' },   // 가입 후 · 청록
+    2: { bg: 'rgb(57,56,67)', acc: 'rgb(200,197,251)' },   // 금액 설계 · 라벤더
+    3: { bg: 'rgb(76,57,57)', acc: 'rgb(239,166,163)' }    // 가입 판단 · 산호
+  };
   function bookContent(scr, k, api) {
     var b = /^my:/.test(D.book || '') ? myBookData(+D.book.slice(3)) : BOOKS[D.book];
     var mine = (D.bookAns || {})[D.book || 'household'] || [];
@@ -1027,6 +1048,8 @@
       var ts = card.querySelectorAll('.t'), tt = ts[0], ct = ts[1];
       if (tt) { var sp = tt.querySelector('span'); setText(tt, fitLines(b.q, spanFont(sp), px(tt.parentElement, 'width') || 99, 2).join('\n')); }
       if (ct) setText(ct, b.cat + ' 0');
+      /* 11/14 수현 피그마(B2-1): 내가 남긴 질문책은 왼쪽 위에 라임 책갈피(37×37 삼각형). 읽은 뒤 어두워져도 책갈피는 그대로 */
+      if (!card.querySelector('.bmark')) { var bm = document.createElement('div'); bm.className = 'bmark'; bm.style.cssText = 'position:absolute;left:0;top:0;width:37px;height:37px;background:rgb(211,255,49);clip-path:polygon(0 0,100% 0,0 100%);z-index:4;pointer-events:none'; card.appendChild(bm); }
       if (!b.dropped) { card.dataset.drop = '1'; b.dropped = true; }
     });
   }
@@ -1076,6 +1099,22 @@
     var want = 'Button/Primary/State=' + (ready ? 'Active' : 'Default');
     if (btn.dataset.comp !== want) wearVariant(btn, want);
     btn.style.pointerEvents = ready ? '' : 'none';
+    qTint(scr, btn, ready);
+  }
+  /* 11/14 수현 피그마(디자인 11/14 · B3-5 세 벌): 「어느 때 궁금한 내용인가요?」에서 고른 칩 색으로 칩 테두리 · 글자 · 질문 남기기 버튼이 바뀜 */
+  var WHEN_COL = { '가입 전': '111,210,215', '금액 정하기': '200,197,251', '가입 후': '239,166,163' };
+  function qTint(scr, btn, ready) {
+    var col = null;
+    [].forEach.call(scr.querySelectorAll('[data-comp^="Chip/"]'), function (c) {
+      var t = txtOf(c); if (!WHEN_COL[t] || !/Selected/.test(c.dataset.comp)) return;
+      col = WHEN_COL[t];
+      c.style.boxShadow = 'inset 0 0 0 1.2px rgb(' + col + ')';
+      [].forEach.call(c.querySelectorAll('span'), function (sp) { sp.style.color = 'rgb(' + col + ')'; });
+    });
+    if (ready && col) {
+      btn.style.background = 'linear-gradient(rgb(' + col + '),rgb(' + col + '))';
+      [].forEach.call(btn.querySelectorAll('span'), function (sp) { sp.style.color = 'rgb(21,21,21)'; });
+    }
   }
   // 눈금자: 손가락 · 마우스로 끌기, 트랙패드 · 마우스 휠로 밀기, 놓으면 미끄러지다 칸에 맞춰 멈춤
   function ruler(scr, api, field, lo, hi) {
