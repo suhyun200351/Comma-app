@@ -839,6 +839,8 @@
   // 11/14: 어둡게 하는 건 책 안쪽만 — 내 질문책의 라임 책갈피(.bmark)는 그대로 밝게
   function dimCard(c, on, slow) {
     c.style.filter = ''; c.style.transition = '';
+    // 그림 한 장짜리 책(IMG: 보라 · 청록 표지)은 자식이 없으니 책 자체를 어둡게
+    if (!c.children.length) { c.style.transition = slow ? 'filter .7s ease' : ''; c.style.filter = on ? READ_DIM : ''; return; }
     [].forEach.call(c.children, function (ch) { if (ch.classList.contains('bmark')) return; ch.style.transition = slow ? 'filter .7s ease' : ''; ch.style.filter = on ? READ_DIM : ''; });
   }
   function bookSetup(scr) {

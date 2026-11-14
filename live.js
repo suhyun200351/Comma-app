@@ -416,6 +416,7 @@
       if (txt === '오늘') D.day = TODAY; else if (txt === '내일') D.day = TODAY + 1; else if (/^이번 주말/.test(txt)) D.day = 24;
       var m = txt.match(/^10월 (\d+)일$/); if (m) D.day = +m[1];
     });
+    flogLogo(scr);
     if (k === 'B-0' || k === 'B2-1') myBooks(scr, api);
     if (/^B3-[123]$/.test(k)) { bookLook(scr); bookContent(scr, k, api); }
     extras(scr, k, api);
@@ -799,6 +800,7 @@
       bar.style.top = (parseFloat(content.style.height) - 102) + 'px'; bar.style.zIndex = 3;
       content.appendChild(bar); if (window.COMMA_FIXB) window.COMMA_FIXB(bar);
     }
+    themeBar(scr);
     var ta = textInput(bar, api, /^답변$/, { max: 100, w: 190, value: D.answerDraft || '', onInput: function (v) { D.answerDraft = v; } });
     var reg = api.findText(bar, /^등록$/); if (!reg) return;
     var btn = reg.parentElement;
@@ -923,8 +925,8 @@
     /* 11/14 수현 피그마(디자인 11/14 · B3 세 벌): 책 색에 따라 화면 바탕 · 아코디언 머리 · 작은 라벨 색이 바뀜
        바탕 = #151515 위에 서브색 20%(산호는 25%), 아코디언 머리 = 서브색 면 + 검정 글자 */
     var TH = BOOK_THEME[no];
-    scr.style.background = TH.bg;
-    var bar = scr.querySelector('[data-name="Frame 2087332311"]'); if (bar && /등록/.test(bar.textContent)) bar.style.background = 'linear-gradient(' + TH.bg.replace('rgb', 'rgba').replace(')', ',0)') + ',' + TH.bg + ' 28%)';
+    scr.style.background = TH.bg; scr.dataset.bookNo = no;
+    themeBar(scr);
     [].forEach.call(scr.querySelectorAll('.t'), function (t) {
       if (t.closest('.under')) return;
       var x = textOf(t), head = t.parentElement;
@@ -936,6 +938,32 @@
         [].forEach.call(t.querySelectorAll('span'), function (sp) { sp.style.color = TH.acc; });
       }
     });
+  }
+  // 아래 답변 바: 바탕색과 같은 색(위쪽은 투명하게 이어짐). B3-1은 답변 바가 나중에 붙어서 answerBar에서도 부름
+  function themeBar(scr) {
+    var bar = scr.querySelector('[data-name="Frame 2087332311"]'), TH = scr.dataset.bookNo && BOOK_THEME[scr.dataset.bookNo];
+    if (bar && TH && parseFloat(bar.style.top) > 600) bar.style.background = 'linear-gradient(' + TH.bg.replace('rgb', 'rgba').replace(')', ',0)') + ',' + TH.bg + ' 28%)';
+  }
+  /* 11/14 예심 후: 앱 이름 COMMA → F,LOG. 동전 아이콘은 남기고 COMMA 글자만 F,LOG 로고(수현 피그마 「플로그 로고」 원본)로 바꿈 */
+  var FLOG = 'assets/flog_logo.svg', FLOG_W = 198, FLOG_H = 89, FLOG_CAP = 62.5;
+  function flogLogo(scr) {
+    [].forEach.call(scr.querySelectorAll('img[src$="5cf39097bae6d073.svg"],img[src$="ba3daaf46e36d1de.svg"]'), function (im) {
+      if (im.dataset.flog) return; im.dataset.flog = '1';
+      // 헤더(111×28): 왼쪽 28px 동전만 남기고, 옆에 F,LOG
+      im.style.clipPath = 'inset(0 ' + (px(im, 'width') - 30) + 'px 0 0)';
+      var k = 22 / FLOG_CAP, lg = document.createElement('img');
+      lg.className = 'a'; lg.src = FLOG; lg.dataset.name = 'F,LOG 로고'; lg.alt = 'F,LOG';
+      lg.style.cssText = 'position:absolute;left:' + (px(im, 'left') + 37) + 'px;top:' + (px(im, 'top') + 3) + 'px;width:' + (FLOG_W * k).toFixed(1) + 'px;height:' + (FLOG_H * k).toFixed(1) + 'px;pointer-events:none';
+      im.parentElement.insertBefore(lg, im.nextSibling);
+    });
+    if (scr.dataset.key === 'A-1') {
+      var t = scr.querySelector('img[data-name="Group 34"]');
+      if (t && !t.dataset.flog) {
+        t.dataset.flog = '1'; var k2 = 44 / FLOG_CAP, w = FLOG_W * k2, pw = px(t.parentElement, 'width') || 217;
+        t.src = FLOG; t.alt = 'F,LOG';
+        t.style.width = w.toFixed(1) + 'px'; t.style.height = (FLOG_H * k2).toFixed(1) + 'px'; t.style.left = ((pw - w) / 2).toFixed(1) + 'px';
+      }
+    }
   }
   var BOOK_THEME = {
     1: { bg: 'rgb(42,66,67)', acc: 'rgb(111,210,215)' },   // 가입 후 · 청록
@@ -979,6 +1007,8 @@
         if (c0) { c0.style.left = -(D.bookCard.ix || 0) + 'px'; c0.style.top = -(D.bookCard.iy || 0) + 'px'; c0.style.visibility = ''; c0.style.cursor = ''; }
         [c0].concat([].slice.call(wrap.querySelectorAll('*'))).forEach(function (e) { if (e && e.style) { e.style.opacity = ''; e.style.translate = ''; e.style.scale = ''; e.style.rotate = ''; } });
         cover.style.overflow = 'visible'; cover.appendChild(wrap);
+        /* 11/14: 그림자 상자(표지 자리)를 실제 책 크기에 맞춤 — 그림 한 장짜리 책(보라 · 청록)은 자리보다 좁아서 그림자가 삐져나왔음 */
+        cover.style.width = (D.bookCard.w * s).toFixed(2) + 'px'; cover.style.height = (D.bookCard.h * s).toFixed(2) + 'px';
       }
     }
     if (k === 'B3-2') {
