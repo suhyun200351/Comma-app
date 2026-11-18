@@ -465,6 +465,7 @@
     var scr = screenOf(box); if (!scr || !scr.querySelector('.content')) return false;
     var A = api(), r = A.rel(box, scr); if (!r.w) return false;
     box._hero = 1;
+    if (scr.dataset.key === 'A-1') return heroLogo(box, scr, r);
     var kb = r.w / 199.2, BS = 210 * kb, cx = r.x + r.w / 2, cy = r.y + r.h / 2, ang = 0;
     sparkles(scr, cx, cy, 96 * kb, { spread: 1.5, n: 28, u: 8 * kb * 1.1, z: 2, cur: function () { return coinPal(ang, -1).cur; } });
     var cv = canvasAt(scr, cx - BS / 2, cy - BS / 2, BS, BS); cv.c.style.zIndex = 3; cv.c.style.cursor = 'pointer';
@@ -489,6 +490,22 @@
       x.restore();
       requestAnimationFrame(frame);
     })(t0);
+    return true;
+  }
+  // A-1 첫 화면(수현 11/18): 동전은 빼고 그 자리에 F,LOG 로고, 반짝이는 부호들은 로고 뒤에 (밑의 작은 로고는 숨김)
+  function heroLogo(box, scr, r) {
+    box._hero = 1; box.style.visibility = 'hidden';
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2, LW = 156, LH = LW * 89 / 141;
+    var sp = sparkles(scr, cx, cy, 46, { spread: 2.7, n: 30, u: 6.4, z: 2 });
+    var lg = document.createElement('img'); lg.src = 'assets/flog_logo.svg?v=2'; lg.alt = 'F,LOG'; lg.className = 'nostagger';
+    lg.style.cssText = 'position:absolute;left:' + (cx - LW / 2) + 'px;top:' + (cy - LH / 2) + 'px;width:' + LW + 'px;height:' + LH + 'px;z-index:3;cursor:pointer;opacity:0;transition:opacity .6s ease .15s';
+    (scr.querySelector('.scroller .content') || scr.querySelector('.content') || scr).appendChild(lg);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { lg.style.opacity = 1; }); });
+    lg.addEventListener('click', function (e) { e.stopPropagation(); if (sp && sp.burst) sp.burst(18); });
+    var tries = 0; (function hideSmall() { // 원래 부제 밑 로고는 자리만 두고 숨김
+      [].forEach.call(scr.querySelectorAll('img[src*="flog_logo"]'), function (im) { if (im !== lg) im.style.visibility = 'hidden'; });
+      if (++tries < 12) setTimeout(hideSmall, 120);
+    })();
     return true;
   }
   function floatColors(box) {
