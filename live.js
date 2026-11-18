@@ -955,11 +955,11 @@
   function flogLogo(scr) {
     [].forEach.call(scr.querySelectorAll('img[src$="5cf39097bae6d073.svg"],img[src$="ba3daaf46e36d1de.svg"]'), function (im) {
       if (im.dataset.flog) return; im.dataset.flog = '1';
-      // 헤더(111×28): 왼쪽 28px 동전만 남기고, 옆에 F,LOG
-      im.style.clipPath = 'inset(0 ' + (px(im, 'width') - 30) + 'px 0 0)';
+      // 헤더(111×28): 동전은 빼고 그 자리부터 F,LOG 로고만 (수현 11/18)
+      im.style.visibility = 'hidden';
       var k = 23.8 / FLOG_CAP, lg = document.createElement('img');
       lg.className = 'a'; lg.src = FLOG; lg.dataset.name = 'F,LOG 로고'; lg.alt = 'F,LOG';
-      lg.style.cssText = 'position:absolute;left:' + (px(im, 'left') + 37) + 'px;top:' + (px(im, 'top') + 2.1 - FLOG_TOP * k).toFixed(1) + 'px;width:' + (FLOG_W * k).toFixed(1) + 'px;height:' + (FLOG_H * k).toFixed(1) + 'px;pointer-events:none';
+      lg.style.cssText = 'position:absolute;left:' + px(im, 'left') + 'px;top:' + (px(im, 'top') + 2.1 - FLOG_TOP * k).toFixed(1) + 'px;width:' + (FLOG_W * k).toFixed(1) + 'px;height:' + (FLOG_H * k).toFixed(1) + 'px;pointer-events:none';
       im.parentElement.insertBefore(lg, im.nextSibling);
     });
     if (scr.dataset.key === 'A-1') {
