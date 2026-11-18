@@ -495,7 +495,9 @@
   // A-1 첫 화면(수현 11/18): 동전은 빼고 그 자리에 F,LOG 로고, 반짝이는 부호들은 로고 뒤에 (밑의 작은 로고는 숨김)
   function heroLogo(box, scr, r) {
     box._hero = 1; box.style.visibility = 'hidden';
-    var cx = r.x + r.w / 2, cy = r.y + r.h / 2 + 36, LW = 156, LH = LW * 89 / 141; // 부제와 간격 절반으로 (수현 11/18)
+    var DN = 58; // 로고+부제를 통째로 로그인 버튼 쪽으로 (버튼은 그대로, 사이 간격 절반 · 수현 11/18)
+    var cx = r.x + r.w / 2, cy = r.y + r.h / 2 + 36 + DN, LW = 156, LH = LW * 89 / 141; // 부제와 간격 절반으로 (수현 11/18)
+    var sub = scr.querySelector('[data-name="Frame 2087332438"]'); if (sub) sub.style.translate = '0 ' + DN + 'px';
     var sp = sparkles(scr, cx, cy - 14, 46, { spread: 2.05, n: 26, u: 6.4, z: 2 }); // 부제 글자에는 안 닿게
     var lg = document.createElement('img'); lg.src = 'assets/flog_logo.svg?v=2'; lg.alt = 'F,LOG'; lg.className = 'nostagger';
     lg.style.cssText = 'position:absolute;left:' + (cx - LW / 2) + 'px;top:' + (cy - LH / 2) + 'px;width:' + LW + 'px;height:' + LH + 'px;z-index:3;cursor:pointer;opacity:0;transition:opacity .6s ease .15s';
