@@ -14,7 +14,7 @@
       // 폰: 가로 폭에 꽉 맞춤(모든 기종). 세로가 모자라면 페이지 스크롤
       // Safari 안에서 열면 위 상태바(54) · 아래 홈 막대(34) 자리는 브라우저가 따로 쓰므로 잘라 냄
       // 홈 화면 앱(standalone)으로 열면 그 자리가 진짜 상태바 · 홈 막대라 그대로 둠
-      var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || /[?&]frame\b/.test(location.search); // ?frame: 체험 페이지의 폰 목업 안 — 상태바 · 홈 막대 자리까지 그대로
       var TOP = standalone ? 0 : 54, BOT = standalone ? 0 : 34;
       scale = vw / W;
       stage.style.transform = 'translateY(' + (-TOP * scale).toFixed(2) + 'px) scale(' + scale + ')';
